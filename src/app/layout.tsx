@@ -3,6 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import Navbar from "@/components/EthNavbar";
 // import Web3Provider from "@/components/web3-provider";
 
 const exo2 = Space_Grotesk({
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${exo2.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
           {/* <Web3Provider> */}
+          <Navbar/>
         {children}
         {/* </Web3Provider> */}
         <Toaster/>
