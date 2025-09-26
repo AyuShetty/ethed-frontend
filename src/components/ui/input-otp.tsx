@@ -48,11 +48,15 @@ function InputOTPSlot({
       data-slot="input-otp-slot"
       data-active={isActive}
       className={cn(
-        // ETH palette slot: rounded, border, shadow, active ring/caret colored
-        "flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 border border-cyan-300 text-lg font-mono text-blue-900 shadow transition-all outline-none",
-        "dark:bg-[#102727] dark:text-cyan-100 dark:border-emerald-700",
-        "data-[active=true]:border-emerald-500 data-[active=true]:ring-2 data-[active=true]:ring-cyan-400 data-[active=true]:z-10",
-        "duration-200 ease-in-out focus-within:ring-2 focus-within:ring-cyan-400",
+        // Glassy, pastel gradients, rounded, calm border/shadow, soft focus/active
+        "relative flex h-12 w-12 items-center justify-center rounded-xl",
+        "bg-gradient-to-br from-blue-100/40 via-emerald-100/30 to-cyan-100/30 dark:from-[#153947]/30 dark:via-[#162e29]/40 dark:to-[#193734]/30",
+        "border border-cyan-300/30 dark:border-cyan-900/35",
+        "text-xl font-mono text-blue-900/85 dark:text-cyan-100/90",
+        "shadow-[0_2px_16px_rgba(20,184,166,0.05)]",
+        "transition-all outline-none",
+        "data-[active=true]:border-emerald-400/70 data-[active=true]:ring-2 data-[active=true]:ring-cyan-400/50 data-[active=true]:z-10",
+        "focus-within:shadow-lg focus-within:ring-2 focus-within:ring-cyan-300/40",
         className
       )}
       {...props}
@@ -60,7 +64,7 @@ function InputOTPSlot({
       {char}
       {hasFakeCaret && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="animate-caret-blink bg-cyan-500 w-px h-6" />
+          <div className="animate-caret-blink bg-cyan-400/90 w-px h-7" />
         </div>
       )}
     </div>
@@ -69,8 +73,13 @@ function InputOTPSlot({
 
 function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="input-otp-separator" role="separator" className="flex items-center justify-center text-cyan-400 px-2" {...props}>
-      <MinusIcon />
+    <div
+      data-slot="input-otp-separator"
+      role="separator"
+      className="flex items-center justify-center text-cyan-300/80 px-2"
+      {...props}
+    >
+      <MinusIcon className="h-4 w-4" />
     </div>
   )
 }
