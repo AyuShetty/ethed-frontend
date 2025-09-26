@@ -25,7 +25,6 @@ export default function RootLayout({
       <body className={`${exo2.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
           {/* <Web3Provider> */}
-          <Navbar/>
         {children}
         {/* </Web3Provider> */}
         <Toaster/>

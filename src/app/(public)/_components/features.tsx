@@ -58,7 +58,7 @@ const cardVariants = {
     y: 0, 
     scale: 1, 
     transition: { 
-      type: 'spring' as const, 
+      type: 'spring' as const, // Use string instead of number
       stiffness: 76, 
       damping: 17 
     }
@@ -66,7 +66,7 @@ const cardVariants = {
   hover: {
     scale: 1.04,
     boxShadow: '0 4px 40px 0 #38bdf833, 0 2px 10px #0e74902e',
-    transition: { type: 'spring' as const, stiffness: 140, damping: 12 },
+    transition: { type: 'spring'as const, stiffness: 140, damping: 12 },
   },
 };
 

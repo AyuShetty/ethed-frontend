@@ -76,11 +76,11 @@ export default function LoginForm() {
 
   return (
     <Card
-      className="w-full max-w-md mx-auto text-center rounded-3xl overflow-hidden
+      className="w-full text-center rounded-2xl overflow-hidden
         border border-cyan-400/30 dark:border-emerald-500/40 
         bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-slate-950/95
         shadow-[0_0_25px_rgba(34,211,238,0.2)] dark:shadow-[0_0_30px_rgba(16,185,129,0.3)]
-        backdrop-blur-2xl p-8 relative"
+        backdrop-blur-2xl p-6 relative"
     >
       {/* Logo */}
       {/* <Image
@@ -92,25 +92,25 @@ export default function LoginForm() {
       /> */}
 
       {/* Title */}
-      <CardHeader className="px-0 space-y-2">
+      <CardHeader className="px-0 space-y-1 pb-4">
         <CardTitle
-          className="text-3xl font-extrabold tracking-tight
+          className="text-2xl font-extrabold tracking-tight
           bg-gradient-to-r from-emerald-400 via-cyan-300 to-blue-400 
           bg-clip-text text-transparent drop-shadow-lg"
         >
           Welcome Back
         </CardTitle>
-        <CardDescription className="text-base text-cyan-200/80 font-medium">
+        <CardDescription className="text-sm text-cyan-200/80 font-medium">
           Sign in to continue your EthEd journey.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4 px-0 mt-4">
+      <CardContent className="flex flex-col gap-3 px-0">
         {/* GitHub */}
         <Button
           disabled={githubPending}
           onClick={signInWithGitHub}
-          className="w-full flex gap-2 items-center justify-center rounded-xl
+          className="w-full flex gap-2 items-center justify-center rounded-xl py-3 text-sm
             bg-gradient-to-r from-slate-800 via-slate-900 to-black 
             text-white font-semibold border border-cyan-600/40
             hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]
@@ -128,7 +128,7 @@ export default function LoginForm() {
         <Button
           disabled={googlePending}
           onClick={signInWithGoogle}
-          className="w-full flex gap-2 items-center justify-center rounded-xl
+          className="w-full flex gap-2 items-center justify-center rounded-xl py-3 text-sm
             bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500
             text-white font-semibold border border-emerald-500/40
             hover:shadow-[0_0_18px_rgba(16,185,129,0.45)]
@@ -145,13 +145,13 @@ export default function LoginForm() {
         {/* Divider */}
         <div className="relative my-4">
           <div className="absolute inset-0 top-1/2 border-t border-cyan-700/40" />
-          <span className="relative px-3 bg-slate-950/95 text-xs font-semibold uppercase tracking-wider text-cyan-300/70">
+          <span className="relative px-4 bg-slate-950/95 text-xs font-semibold uppercase tracking-wider text-cyan-300/70">
             Or sign in with email
           </span>
         </div>
 
         {/* Email */}
-        <div className="grid gap-4 text-left">
+        <div className="grid gap-3 text-left">
           <div className="grid gap-1.5">
             <Label
               htmlFor="email"
@@ -174,7 +174,7 @@ export default function LoginForm() {
           <Button
             onClick={signInWithEmail}
             disabled={emailPending}
-            className="w-full flex gap-2 items-center justify-center rounded-xl
+            className="w-full flex gap-2 items-center justify-center rounded-xl py-3 text-sm
               bg-gradient-to-r from-cyan-600 via-emerald-500 to-blue-500
               text-white font-semibold border border-cyan-500/40
               hover:shadow-[0_0_18px_rgba(34,211,238,0.45)]

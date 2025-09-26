@@ -8,11 +8,11 @@ export default async function LoginPage() {
       headers: await headers(),
   });
 
-  // if (session) {
-  //   return (
-  //     redirect("/")
-  //   );
-  // }
+  if (session) {
+    return (
+      redirect("/")
+    );
+  }
   return (
       <LoginForm />
   );
