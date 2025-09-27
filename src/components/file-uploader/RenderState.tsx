@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
-import { CloudUploadIcon, FileIcon, ImageIcon, VideoIcon } from "lucide-react"
+import { CloudUploadIcon, FileIcon, ImageIcon, VideoIcon, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface RenderEmptyStateProps {
   isDragActive: boolean;
@@ -13,33 +14,45 @@ export function RenderEmptyState({
   maxSize = 5 
 }: RenderEmptyStateProps) {
   const getFileTypeIcon = () => {
-    if (acceptedFileTypes.includes("image")) return ImageIcon;
-    if (acceptedFileTypes.includes("video")) return VideoIcon;
+    if (acceptedFileTypes.some(type => type.includes("image"))) return ImageIcon;
+    if (acceptedFileTypes.some(type => type.includes("video"))) return VideoIcon;
     return FileIcon;
   };
 
   const FileTypeIcon = getFileTypeIcon();
 
+  const formatAcceptedTypes = () => {
+    return acceptedFileTypes
+      .map(type => {
+        if (type.includes("image")) return "Images";
+        if (type.includes("video")) return "Videos";
+        if (type.includes("pdf")) return "PDFs";
+        return "Documents";
+      })
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .join(", ");
+  };
+
   return (
-    <div className="text-center">
+    <div className="text-center py-8">
       <div className={cn(
-        "flex items-center mx-auto justify-center size-20 rounded-full mb-6 transition-all duration-300",
+        "flex items-center mx-auto justify-center size-20 rounded-full mb-6 transition-all duration-300 shadow-lg",
         isDragActive 
-          ? "bg-gradient-to-br from-emerald-100 to-cyan-100 scale-110" 
-          : "bg-gradient-to-br from-slate-100 to-slate-50 hover:from-emerald-50 hover:to-cyan-50"
+          ? "bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 scale-110 shadow-emerald-500/20" 
+          : "bg-gradient-to-br from-slate-700/50 to-slate-600/50 hover:from-emerald-500/10 hover:to-cyan-500/10 hover:scale-105"
       )}>
         <div className="relative">
           <CloudUploadIcon
             className={cn(
               "h-10 w-10 transition-all duration-300",
               isDragActive 
-                ? "text-emerald-600 animate-bounce scale-110" 
-                : "text-slate-400 group-hover:text-emerald-500"
+                ? "text-emerald-400 animate-bounce scale-110" 
+                : "text-slate-300 group-hover:text-emerald-400"
             )}
           />
           <FileTypeIcon className={cn(
-            "absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-white p-0.5",
-            isDragActive ? "text-cyan-600" : "text-slate-500"
+            "absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-slate-800 border border-slate-600 p-0.5",
+            isDragActive ? "text-cyan-400 border-cyan-400" : "text-slate-400 border-slate-600"
           )} />
         </div>
       </div>
@@ -56,13 +69,12 @@ export function RenderEmptyState({
       </p>
       
       <div className="space-y-1 text-xs text-slate-400">
-        <p>Supported: {acceptedFileTypes.join(", ")}</p>
+        <p className="font-medium">Supported: {formatAcceptedTypes()}</p>
         <p>Max size: {maxSize}MB per file</p>
       </div>
     </div>
   );
 }
-
 
 interface RenderErrorStateProps {
   message: string;
@@ -71,10 +83,10 @@ interface RenderErrorStateProps {
 
 export function RenderErrorState({ message, onRetry }: RenderErrorStateProps) {
   return (
-    <div className="text-center">
-      <div className="flex items-center mx-auto justify-center size-20 rounded-full bg-gradient-to-br from-red-100 to-pink-100 mb-6">
+    <div className="text-center py-8">
+      <div className="flex items-center mx-auto justify-center size-20 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 mb-6 shadow-lg shadow-red-500/20">
         <svg
-          className="mx-auto h-10 w-10 text-red-600"
+          className="mx-auto h-10 w-10 text-red-400"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -85,19 +97,22 @@ export function RenderErrorState({ message, onRetry }: RenderErrorStateProps) {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}    
-            d="M6 18L18 6M6 6l12 12"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
           />
         </svg>
       </div>
       <h3 className="text-lg font-semibold text-white mb-2">Upload Failed</h3>
-      <p className="text-sm text-red-400 mb-4">{message}</p>
+      <p className="text-sm text-red-400 mb-4 max-w-sm mx-auto">{message}</p>
       {onRetry && (
-        <button
+        <Button
           onClick={onRetry}
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          variant="glass"
+          size="sm"
+          className="border-red-400/50 hover:border-red-400 text-red-300 hover:text-red-200"
         >
-          Try again
-        </button>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Try Again
+        </Button>
       )}
     </div>
   );
@@ -110,23 +125,26 @@ interface RenderUploadingStateProps {
 
 export function RenderUploadingState({ progress, fileName }: RenderUploadingStateProps) {
   return (
-    <div className="text-center">
-      <div className="flex items-center mx-auto justify-center size-20 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 mb-6">
-        <CloudUploadIcon className="h-10 w-10 text-blue-600 animate-pulse" />
+    <div className="text-center py-8">
+      <div className="flex items-center mx-auto justify-center size-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 mb-6 shadow-lg shadow-cyan-500/20">
+        <CloudUploadIcon className="h-10 w-10 text-cyan-400 animate-pulse" />
       </div>
-      <h3 className="text-lg font-semibold text-white mb-2">Uploading...</h3>
-      <p className="text-sm text-slate-300 mb-4 truncate max-w-xs mx-auto">{fileName}</p>
+      <h3 className="text-lg font-semibold text-white mb-2">Uploading Files...</h3>
+      <p className="text-sm text-slate-300 mb-4 truncate max-w-xs mx-auto font-medium">{fileName}</p>
       
-      <div className="w-full max-w-xs mx-auto">
-        <div className="flex justify-between text-xs text-slate-300 mb-1">
+      <div className="w-full max-w-xs mx-auto space-y-2">
+        <div className="flex justify-between text-xs text-slate-300">
           <span>Progress</span>
-          <span className="text-emerald-400 font-medium">{progress}%</span>
+          <span className="text-emerald-400 font-semibold">{Math.round(progress)}%</span>
         </div>
-        <div className="w-full bg-slate-600/50 rounded-full h-2">
+        <div className="w-full bg-slate-600/50 rounded-full h-2.5 shadow-inner">
           <div 
-            className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-2 rounded-full transition-all duration-300 ease-out shadow-lg shadow-emerald-500/30"
+            className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-2.5 rounded-full transition-all duration-300 ease-out shadow-lg shadow-emerald-500/30"
             style={{ width: `${progress}%` }}
           />
+        </div>
+        <div className="text-xs text-slate-400">
+          Please don't close this page
         </div>
       </div>
     </div>
@@ -140,10 +158,10 @@ interface RenderSuccessStateProps {
 
 export function RenderSuccessState({ fileCount, onReset }: RenderSuccessStateProps) {
   return (
-    <div className="text-center">
-      <div className="flex items-center mx-auto justify-center size-20 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 mb-6">
+    <div className="text-center py-8">
+      <div className="flex items-center mx-auto justify-center size-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-green-500/20 mb-6 shadow-lg shadow-emerald-500/20">
         <svg
-          className="h-10 w-10 text-green-600"
+          className="h-10 w-10 text-emerald-400"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -153,7 +171,7 @@ export function RenderSuccessState({ fileCount, onReset }: RenderSuccessStatePro
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M5 13l4 4L19 7"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
       </div>
@@ -162,12 +180,14 @@ export function RenderSuccessState({ fileCount, onReset }: RenderSuccessStatePro
         {fileCount} {fileCount === 1 ? 'file' : 'files'} uploaded successfully
       </p>
       {onReset && (
-        <button
+        <Button
           onClick={onReset}
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          variant="gradient"
+          size="sm"
+          className="shadow-lg hover:shadow-xl"
         >
-          Upload more files
-        </button>
+          Upload More Files
+        </Button>
       )}
     </div>
   );

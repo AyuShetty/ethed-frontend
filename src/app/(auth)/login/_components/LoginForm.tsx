@@ -11,18 +11,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, WalletIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FaGoogle, FaGithub } from "react-icons/fa";
 import { toast } from "sonner";
 import Image from "next/image";
+import { ethers } from "ethers";
+import { SiweMessage } from "siwe";
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 
 export default function LoginForm() {
   const [githubPending, startGitHubPending] = useTransition();
   const [googlePending, startGooglePending] = useTransition();
   const [emailPending, startEmailPending] = useTransition();
   const [email, setEmail] = useState("");
+    const [siwePending, startSiwePending] = useTransition();
   const router = useRouter();
 
   async function signInWithGitHub() {
@@ -71,6 +80,57 @@ export default function LoginForm() {
           },
         },
       });
+    });
+  }
+
+    // SIWE Ethereum login
+  async function signInWithEthereum() {
+    startSiwePending(async () => {
+      try {
+        if (!window.ethereum) throw new Error("No Ethereum wallet found");
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const walletAddress = await signer.getAddress();
+
+        // 1️⃣ Get nonce from backend
+        const { data: nonceData } = await authClient.siwe.nonce({
+          walletAddress,
+          chainId: 137, // Polygon
+        });
+        if (!nonceData) throw new Error("Failed to fetch nonce");
+
+        const nonce = nonceData.nonce;
+
+        // 2️⃣ Create SIWE message
+        const domain = window.location.host;
+// After fetching nonce
+const message = new SiweMessage({
+  domain: window.location.host,
+  address: walletAddress,
+  statement: 'Sign in to MyApp',
+  uri: window.location.origin,
+  version: '1',
+  chainId: 137,
+  nonce: nonce,
+  issuedAt: new Date().toISOString(),
+}).prepareMessage();
+
+const signature = await signer.signMessage(message);
+
+const { data: verifyData } = await authClient.siwe.verify({
+  message,
+  signature,
+  walletAddress,
+  chainId: 137,
+});
+
+        if (!verifyData) throw new Error("SIWE verification failed");
+
+        toast.success(`Welcome ${verifyData.user.id || "User"}!`);
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err.message || "Ethereum login failed");
+      }
     });
   }
 
@@ -129,6 +189,16 @@ export default function LoginForm() {
               )}
               <span className="ml-3">Continue with Google</span>
             </Button>
+
+                        <Button
+              disabled={siwePending}
+              onClick={signInWithEthereum}
+              className="w-full h-12 bg-gradient-to-r from-yellow-500/90 via-yellow-400/90 to-yellow-500/90 hover:from-yellow-400/90 hover:via-yellow-300/90 hover:to-yellow-400/90 border border-yellow-400/30 hover:border-yellow-300/50 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
+            >
+              {siwePending ? <Loader2 className="h-5 w-5 animate-spin text-yellow-100" /> : <WalletIcon className="h-5 w-5 text-yellow-100" />}
+              <span className="ml-3">Sign in with Ethereum</span>
+            </Button>
+
           </div>
 
           {/* Divider */}

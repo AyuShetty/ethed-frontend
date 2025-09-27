@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       .keyvalues({ project: "0G_simulation" });
 
     // Build gateway URL for preview/download
-const gatewayUrl = pinata?.config?.pinataGateway || "https://gateway.pinata.cloud";
+const gatewayUrl = "https://gateway.pinata.cloud";
 const fileUrl = `${gatewayUrl}/ipfs/${upload.cid}`;
 
 
