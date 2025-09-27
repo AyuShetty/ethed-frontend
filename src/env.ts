@@ -30,6 +30,11 @@ export const env = createEnv({
     WALLETCONNECT_PROJECT_ID : z.string(),
 
     ARCJET_KEY: z.string().min(1),
+
+    PINATA_API_KEY: z.string().min(1),
+    PINATA_API_SECRET: z.string().min(1),
+    PINATA_JWT: z.string().min(1),
+    PINATA_GATEWAY_URL: z.string().min(1),
   },
   experimental__runtimeEnv: {
   
