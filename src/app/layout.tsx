@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/EthNavbar";
-// import Web3Provider from "@/components/web3-provider";
+import AgentHover from "@/components/AgentHover";
 
 const exo2 = Space_Grotesk({
   subsets: ["latin"],
@@ -25,9 +25,16 @@ export default function RootLayout({
       <body className={`${exo2.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
           {/* <Web3Provider> */}
-        {children}
-        {/* </Web3Provider> */}
-        <Toaster/>
+          {children}
+          {/* </Web3Provider> */}
+          <Toaster />
+          <AgentHover
+            posterSrc="/pause.png"
+            p1Src="/p1.gif"
+            p2Src="/p2.gif"
+            size={128}
+            offset={{ right: -14, bottom: 0 }}
+          />
         </ThemeProvider>
       </body>
     </html>
