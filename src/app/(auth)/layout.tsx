@@ -7,10 +7,9 @@ import { ReactNode } from "react";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-screen px-4 py-12 bg-[radial-gradient(ellipse_120%_70%_at_50%_-20%,#0f4b4b20_0%,#031616_70%,#000000_100%)] text-cyan-100 overflow-hidden">
+    <div className="relative min-h-screen px-4 py-12 bg-[radial-gradient(ellipse_120%_70%_at_50%_-20%,#0f4b4b20_0%,#031616_70%,#000000_100%)] text-cyan-100 overflow-hidden" data-text-content>
       
-      {/* Subtle electric grid background */}
-      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,#00fff533_1px,transparent_1px),linear-gradient(to_bottom,#00f2ff1a_1px,transparent_1px)] bg-[size:24px_24px] opacity-10" />
+      {/* Removed local grid - now using global grid */}
 
       {/* Glowing background aura */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 md:h-[28rem] md:w-[28rem] rounded-full bg-emerald-400/10 blur-3xl" />
@@ -36,7 +35,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center">
           {/* Auth Content */}
-          <div className="relative z-10 w-full max-w-md">
+          <div className="relative z-10 w-full max-w-md" data-text-content>
             {children}
           </div>
 

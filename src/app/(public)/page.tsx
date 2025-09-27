@@ -15,11 +15,10 @@ export default function EthEdHero() {
         <div className="from-emerald-400/20 via-background to-background absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))]"></div>
         <div className="bg-cyan-300/10 absolute top-0 left-1/2 -z-10 h-[1000px] w-[1000px] -translate-x-1/2 rounded-full blur-3xl"></div>
       </div>
-      {/* Subtle grid lines with blue/green */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#3bc2f933_1px,transparent_1px),linear-gradient(to_bottom,#70e7c633_1px,transparent_1px)] bg-[size:16px_16px] opacity-15"></div>
+      {/* Global Grid is now handled at the layout level */}
 
       <div className="relative z-10 container mx-auto px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl" data-text-content>
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -27,7 +26,7 @@ export default function EthEdHero() {
             transition={{ duration: 0.5 }}
             className="mx-auto mb-6 flex justify-center"
           >
-            <div className="border-cyan-400/30 bg-black/80 inline-flex items-center rounded-full border px-3 py-1 text-sm backdrop-blur-sm">
+            <div className="border-cyan-400/30 bg-black/80 inline-flex items-center rounded-full border px-3 py-1 text-sm backdrop-blur-sm badge" data-text-content>
               <span className="bg-emerald-400 mr-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white">
                 New
               </span>
@@ -66,7 +65,8 @@ export default function EthEdHero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
+            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row cta-buttons"
+            data-text-content
           >
             <Button
               size="lg"

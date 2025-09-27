@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/EthNavbar";
 import AgentHover from "@/components/AgentHover";
+import GlobalGrid from "@/components/GlobalGrid";
 
 const exo2 = Space_Grotesk({
   subsets: ["latin"],
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en" style={{ scrollBehavior: "smooth" }} suppressHydrationWarning>
       <body className={`${exo2.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
+          <GlobalGrid enabled={true} adaptiveGlow={true} />
           {children}
           <Toaster />
           <AgentHover
