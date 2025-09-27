@@ -24,7 +24,6 @@ export default function AgentHover({
   const timer = useRef<NodeJS.Timeout | null>(null);
   const hoveredRef = useRef(false);
 
-  // Check for prefers-reduced-motion on mount
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(mediaQuery.matches);
@@ -36,8 +35,6 @@ export default function AgentHover({
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
-
-  // Clear any pending timers on unmount
   useEffect(() => {
     return () => { 
       if (timer.current) clearTimeout(timer.current); 
@@ -72,46 +69,32 @@ export default function AgentHover({
   };
 
   const onEnter = () => {
-    // If reduced motion is preferred, just show poster
     if (prefersReducedMotion) {
       setIsVisible(true);
       showPoster();
       return;
     }
 
-    // Set hovered state and make visible immediately
     hoveredRef.current = true;
     setIsVisible(true);
-    
-    // Cancel any pending timers from previous interactions
     clearTimer();
     
-    // Immediately start p1.gif (peek/emerge animation)
     playGif(p1Src, 2000, () => {
-      // After p1 completes, check if still hovered and show pause.png
-      // Use ref to get current value and avoid stale closure
       if (hoveredRef.current) {
-        showPoster(); // This shows pause.png
       }
     });
   };
 
   const onLeave = () => {
-    // Set hovered state immediately
     hoveredRef.current = false;
-    
-    // Cancel any pending timers from previous interactions
     clearTimer();
     
-    // If reduced motion is preferred, just hide immediately
     if (prefersReducedMotion) {
       setIsVisible(false);
       return;
     }
     
-    // Immediately start p2.gif (retreat/idle animation) - this replaces whatever was showing
-    playGif(p2Src, 600, () => {
-      // After p2 completes, hide the agent completely
+     playGif(p2Src, 600, () => {
       setIsVisible(false);
     });
   };
