@@ -31,10 +31,10 @@ export const env = createEnv({
 
     ARCJET_KEY: z.string().min(1),
 
-    PINATA_API_KEY: z.string().min(1),
-    PINATA_API_SECRET: z.string().min(1),
-    PINATA_JWT: z.string().min(1),
-    PINATA_GATEWAY_URL: z.string().min(1),
+    PINATA_API_KEY: z.string().optional(),
+    PINATA_API_SECRET: z.string().optional(),
+    PINATA_JWT: z.string().optional(),
+    PINATA_GATEWAY_URL: z.string().optional(),
   },
   experimental__runtimeEnv: {
   
