@@ -84,55 +84,58 @@ export default function LoginForm() {
   }
 
     // SIWE Ethereum login
-  async function signInWithEthereum() {
-    startSiwePending(async () => {
-      try {
-        if (!window.ethereum) throw new Error("No Ethereum wallet found");
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const walletAddress = await signer.getAddress();
+async function signInWithEthereum() {
+  startSiwePending(async () => {
+    try {
+      if (!window.ethereum) throw new Error("No Ethereum wallet found");
 
-        // 1️⃣ Get nonce from backend
-        const { data: nonceData } = await authClient.siwe.nonce({
-          walletAddress,
-          chainId: 137, // Polygon
-        });
-        if (!nonceData) throw new Error("Failed to fetch nonce");
+      // Request wallet access
+      await window.ethereum.request({ method: "eth_requestAccounts" });
 
-        const nonce = nonceData.nonce;
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
 
-        // 2️⃣ Create SIWE message
-        const domain = window.location.host;
-// After fetching nonce
-const message = new SiweMessage({
-  domain: window.location.host,
-  address: walletAddress,
-  statement: 'Sign in to MyApp',
-  uri: window.location.origin,
-  version: '1',
-  chainId: 137,
-  nonce: nonce,
-  issuedAt: new Date().toISOString(),
-}).prepareMessage();
+      // Get fresh nonce
+      const { data: nonceData } = await authClient.siwe.nonce({ walletAddress, chainId: 137 });
+      if (!nonceData) throw new Error("Failed to fetch nonce");
 
-const signature = await signer.signMessage(message);
+      // Create SIWE message
+      const message = new SiweMessage({
+        domain: window.location.host,
+        address: walletAddress,
+        statement: "Sign in to MyApp",
+        uri: window.location.origin,
+        version: "1",
+        chainId: 137,
+        nonce: nonceData.nonce,
+        issuedAt: new Date().toISOString(),
+      }).prepareMessage();
 
-const { data: verifyData } = await authClient.siwe.verify({
-  message,
-  signature,
-  walletAddress,
-  chainId: 137,
-});
+      console.log(message.split("\n").length); // should be ≤ 9
 
-        if (!verifyData) throw new Error("SIWE verification failed");
 
-        toast.success(`Welcome ${verifyData.user.id || "User"}!`);
-      } catch (err: any) {
-        console.error(err);
-        toast.error(err.message || "Ethereum login failed");
-      }
-    });
-  }
+      // Ask user to sign
+      const signature = await signer.signMessage(message);
+
+      // Verify signature
+      const { data: verifyData } = await authClient.siwe.verify({
+        message,
+        signature,
+        walletAddress,
+        chainId: 137,
+      });
+
+      if (!verifyData) throw new Error("SIWE verification failed");
+
+      toast.success(`Welcome ${verifyData.user.id || "User"}!`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Ethereum login failed");
+    }
+  });
+}
+
 
   return (
     <div className="w-full max-w-md mx-auto">

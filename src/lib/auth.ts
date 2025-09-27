@@ -37,7 +37,7 @@ export const auth = betterAuth({
       },
     }),
     siwe({
-      domain: "ethdoted",
+      domain: "localhost:3000",
       emailDomainName: "ethdoted.app",
       anonymous: false,
       getNonce: async () => generateRandomString(32),
