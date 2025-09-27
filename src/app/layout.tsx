@@ -24,15 +24,15 @@ export default function RootLayout({
     <html lang="en" style={{ scrollBehavior: "smooth" }} suppressHydrationWarning>
       <body className={`${exo2.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
-          {/* <Web3Provider> */}
           {children}
-          {/* </Web3Provider> */}
           <Toaster />
           <AgentHover
             posterSrc="/pause.png"
             p1Src="/p1.gif"
             p2Src="/p2.gif"
-            size={128}
+            p3Src="/p3.gif"
+            pause2Src="/pause 2.png"
+            size={130}
             offset={{ right: -14, bottom: 0 }}
           />
         </ThemeProvider>
