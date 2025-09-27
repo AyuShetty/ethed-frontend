@@ -18,16 +18,6 @@ interface CreativeGridProps {
   adaptiveGlow?: boolean; // Enable intelligent glow adaptation
 }
 
-/**
- * Creative Interactive Grid Component
- * Inspired by Linear.app, Stripe.com, and Vercel.com interactive backgrounds
- * Features:
- * - Mouse-following glow effect
- * - Particle trail system
- * - Dynamic grid highlighting
- * - Smooth animations with easing
- * - Performance optimized with RAF
- */
 export default function CreativeGrid({ 
   className = '', 
   contentSelectors = ['h1', 'h2', 'h3', 'p', '.text-content', 'button', '[data-text-content]'],
