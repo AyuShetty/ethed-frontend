@@ -29,6 +29,7 @@ export default function AgentHover({
   const cacheBust = useRef(0);
   const timer = useRef<NodeJS.Timeout | null>(null);
   const hoveredRef = useRef(false);
+  const isPlayingP3Ref = useRef(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -46,6 +47,35 @@ export default function AgentHover({
       if (timer.current) clearTimeout(timer.current); 
     };
   }, []);
+
+  // Handle click outside to close dialog
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showDialog && event.target) {
+        const target = event.target as Element;
+        
+        // Check if click is inside dialog or agent
+        const dialogElement = document.querySelector('[data-agent-dialog="true"]');
+        const agentElement = document.querySelector('[data-agent-container="true"]');
+        
+        const isInsideDialog = dialogElement?.contains(target);
+        const isInsideAgent = agentElement?.contains(target);
+        
+        // Only close if clicked outside both dialog and agent
+        if (!isInsideDialog && !isInsideAgent) {
+          closeDialog();
+        }
+      }
+    };
+
+    if (showDialog) {
+      document.addEventListener('click', handleClickOutside, true);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside, true);
+    };
+  }, [showDialog]);
 
   const clearTimer = () => {
     if (timer.current) {
@@ -67,13 +97,16 @@ export default function AgentHover({
     }
 
     setIsClicked(true);
+    isPlayingP3Ref.current = true;
     clearTimer();
     
     // Play p3.gif for 2.2 seconds (22 * 0.1s)
     playGif(p3Src, 2200, () => {
-      // After p3 completes, show pause2.png and dialog
-      showPoster();
+      // After p3 completes, ALWAYS show pause2.png and dialog regardless of hover state
+      isPlayingP3Ref.current = false;
+      setSrc(pause2Src);
       setShowDialog(true);
+      // Agent stays visible and dialog remains open until user clicks elsewhere
     });
   };
 
@@ -104,23 +137,29 @@ export default function AgentHover({
     setIsVisible(true);
     clearTimer();
     
-    // Start p1.gif briefly, then immediately switch to pause
+    // Start p1.gif briefly, then switch to pause1
     playGif(p1Src, 1800, () => {
-      // After brief p1 animation, show pause image while hovering
+      // After brief p1 animation, show pause1 image while hovering
       if (hoveredRef.current) {
-        showPoster(); // This shows pause.png and stays there while hovered
+        setSrc(posterSrc); // Show pause1.png (posterSrc)
       }
     });
   };
 
   const onLeave = () => {
     hoveredRef.current = false;
-    clearTimer();
     
-    // If clicked and dialog is open, don't hide on mouse leave
-    if (isClicked && showDialog) {
-      return;
+    // If clicked (either dialog is open or p3 is playing), don't hide on mouse leave
+    if (isClicked) {
+      return; // Stay visible when clicked, regardless of dialog state
     }
+    
+    // If p3 is currently playing, let it complete first
+    if (isPlayingP3Ref.current) {
+      return; // Don't interrupt p3 animation
+    }
+    
+    clearTimer();
     
     if (prefersReducedMotion) {
       setIsVisible(false);
@@ -135,15 +174,20 @@ export default function AgentHover({
   const closeDialog = () => {
     setShowDialog(false);
     setIsClicked(false);
-    showPoster();
+    isPlayingP3Ref.current = false;
+    setSrc(posterSrc); // Back to pause1
   };
 
   return (
     <>
       <div
+        data-agent-container="true"
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
         style={{
           position: "fixed",
           right: offset.right,
@@ -175,6 +219,7 @@ export default function AgentHover({
       {/* Enhanced Dialog/Chat Bubble */}
       {showDialog && (
         <div
+          data-agent-dialog="true"
           style={{
             position: "fixed",
             right: offset.right + size + 20,
@@ -182,6 +227,7 @@ export default function AgentHover({
             zIndex: 10000,
           }}
           className="animate-in slide-in-from-right-2 fade-in-0 duration-300"
+          onClick={(e) => e.stopPropagation()} // Prevent click outside from closing
         >
           <div className="relative max-w-xs">
             {/* Compact Glassmorphism Chat Bubble */}
