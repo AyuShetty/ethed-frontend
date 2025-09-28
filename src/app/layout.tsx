@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import AgentHover from "@/components/AgentHover";
 import GlobalGrid from "@/components/GlobalGrid";
 import NextAuthSessionProvider from "@/components/providers/SessionProvider";
+import Navbar from "./(public)/_components/navbar";
 const exo2 = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-exo2",
@@ -26,6 +27,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
           <NextAuthSessionProvider>
           <GlobalGrid enabled={true} adaptiveGlow={true} />
+          <Navbar/>
           {children}
           <Toaster />
           <AgentHover
