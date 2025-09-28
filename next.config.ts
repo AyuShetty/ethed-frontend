@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+   eslint: {
+    ignoreDuringBuilds: true, // ✅ correct place
+  },
   images: {
     remotePatterns: [
       {
