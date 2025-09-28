@@ -53,8 +53,6 @@ export default function LoginForm() {
   const [githubPending, startGitHubPending] = useTransition();
   const [googlePending, startGooglePending] = useTransition();
   const [siwePending, startSiwePending] = useTransition();
-  const [email, setEmail] = useState("");
-  const [emailPending, startEmailPending] = useTransition();
   const router = useRouter();
 
   async function signInWithGitHub() {
@@ -95,28 +93,6 @@ export default function LoginForm() {
       } catch (error) {
         console.error("Google sign-in error:", error);
         toast.error("Google sign-in failed");
-      }
-    });
-  }
-
-  async function signInWithEmail() {
-    startEmailPending(async () => {
-      try {
-        const result = await signIn("email", {
-          email,
-          callbackUrl: "/",
-          redirect: false,
-        }) as SignInResult | undefined;
-
-        if (result?.error) {
-          toast.error(`Email sign-in error: ${result.error}`);
-        } else if (result?.ok) {
-          toast.success("Check your email for the sign-in link!");
-          router.push("/verify-request?email=" + encodeURIComponent(email));
-        }
-      } catch (error) {
-        console.error("Email sign-in error:", error);
-        toast.error("Email sign-in failed");
       }
     });
   }
@@ -329,42 +305,6 @@ export default function LoginForm() {
                 Or continue with email
               </span>
             </div>
-          </div>
-
-          {/* Email Form */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-slate-300">
-                Email Address
-              </Label>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                id="email"
-                type="email"
-                placeholder="Enter your email address"
-                className="h-12 bg-slate-800/50 border border-slate-600/30 focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20 text-slate-200 placeholder:text-slate-500 rounded-xl transition-all duration-200"
-                required
-              />
-            </div>
-            
-            <Button
-              onClick={signInWithEmail}
-              disabled={emailPending || !email}
-              className="w-full h-12 bg-gradient-to-r from-cyan-600/90 via-emerald-600/90 to-cyan-600/90 hover:from-cyan-500/90 hover:via-emerald-500/90 hover:to-cyan-500/90 border border-cyan-500/30 hover:border-cyan-400/50 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {emailPending ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-3" />
-                  Sending Link...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-3" />
-                  Send Sign-in Link
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </Card>

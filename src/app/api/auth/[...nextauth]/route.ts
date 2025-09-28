@@ -1,3 +1,4 @@
+// /lib/auth.ts
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
@@ -39,113 +40,49 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   providers: [
-    // SIWE Provider
     CredentialsProvider({
       id: "siwe",
       name: "Sign-in with Ethereum",
       credentials: {
-        message: {
-          label: "Message",
-          placeholder: "0x0",
-          type: "text",
-        },
-        signature: {
-          label: "Signature",
-          placeholder: "0x0",
-          type: "text",
-        },
+        message: { label: "Message", type: "text" },
+        signature: { label: "Signature", type: "text" },
       },
-      async authorize(credentials, req) {
-        try {
-          if (!credentials?.message || !credentials?.signature) {
-            console.error("Missing SIWE credentials");
-            return null;
-          }
+      async authorize(credentials) {
+        if (!credentials?.message || !credentials?.signature) return null;
 
-          const siwe = new SiweMessage(JSON.parse(credentials.message));
+        const siwe = new SiweMessage(JSON.parse(credentials.message));
+        const checksummedAddress = getAddress(siwe.address);
 
-          // Ensure address is properly checksummed
-          const checksummedAddress = getAddress(siwe.address);
+        const result = await siwe.verify({ signature: credentials.signature });
+        if (!result.success || (siwe.expirationTime && new Date(siwe.expirationTime) < new Date())) return null;
 
-          const result = await siwe.verify({
-            signature: credentials.signature,
+        let user = await prisma.user.findUnique({
+          where: { email: checksummedAddress.toLowerCase() },
+        });
+
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              email: checksummedAddress.toLowerCase(),
+              name: `${checksummedAddress.slice(0, 6)}...${checksummedAddress.slice(-4)}`,
+              image: `https://api.dicebear.com/7.x/avataaars/svg?seed=${checksummedAddress}`,
+            },
           });
-
-          if (!result.success) {
-            console.error("SIWE verification failed:", result.error);
-            return null;
-          }
-
-          // Check expiration
-          if (
-            siwe.expirationTime &&
-            new Date(siwe.expirationTime) < new Date()
-          ) {
-            console.error("SIWE message expired");
-            return null;
-          }
-
-          // Find or create user with checksummed address
-          let user = await prisma.user.findUnique({
-            where: { email: checksummedAddress.toLowerCase() },
-          });
-
-          if (!user) {
-            user = await prisma.user.create({
-              data: {
-                email: checksummedAddress.toLowerCase(),
-                name: `${checksummedAddress.slice(0, 6)}...${checksummedAddress.slice(
-                  -4
-                )}`,
-                image: `https://api.dicebear.com/7.x/avataaars/svg?seed=${checksummedAddress}`,
-              },
-            });
-          }
-
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-            address: checksummedAddress,
-          };
-        } catch (error) {
-          console.error("SIWE authorization error:", error);
-          return null;
         }
+
+        return { id: user.id, name: user.name, email: user.email, image: user.image, address: checksummedAddress };
       },
     }),
-
-    // Google Provider
-    GoogleProvider({
-      clientId: env.GOOGLE_CLIENT_ID!,
-      clientSecret: env.GOOGLE_CLIENT_SECRET!,
-    }),
-
-    // GitHub Provider
-    GitHubProvider({
-      clientId: env.GITHUB_CLIENT_ID!,
-      clientSecret: env.GITHUB_CLIENT_SECRET!,
-    }),
-
-    // Email Provider
+    GoogleProvider({ clientId: env.GOOGLE_CLIENT_ID!, clientSecret: env.GOOGLE_CLIENT_SECRET! }),
+    GitHubProvider({ clientId: env.GITHUB_CLIENT_ID!, clientSecret: env.GITHUB_CLIENT_SECRET! }),
     EmailProvider({
-      server: {
-        host: env.EMAIL_HOST!,
-        port: env.EMAIL_PORT!,
-        auth: {
-          user: env.EMAIL_USERNAME!,
-          pass: env.EMAIL_PASSWORD!,
-        },
-      },
+      server: { host: env.EMAIL_HOST!, port: env.EMAIL_PORT!, auth: { user: env.EMAIL_USERNAME!, pass: env.EMAIL_PASSWORD! } },
       from: env.EMAIL_FROM!,
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (user && user.address) {
-        token.address = user.address;
-      }
+    async jwt({ token, user }) {
+      if (user?.address) token.address = user.address;
       return token;
     },
     async session({ session, token }) {
@@ -157,23 +94,9 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  events: {
-    async signIn({ user, account, profile }) {
-      console.log(
-        `User ${user.address || user.email} signed in via ${account?.provider}`
-      );
-    },
-    async signOut({ session, token }) {
-      console.log(`User ${session?.address || token?.address} signed out`);
-    },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/auth/error",
-    verifyRequest: "/verify-request",
-  },
+  pages: { signIn: "/login", error: "/auth/error", verifyRequest: "/verify-request" },
   debug: env.NODE_ENV === "development",
-  secret: env.NEXT_AUTH_SECRET,
+  secret: env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
