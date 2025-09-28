@@ -59,7 +59,7 @@ export default function GlobalGrid({
             if (element.matches?.(selector) || element.closest?.(selector)) {
               return true;
             }
-          } catch (e) {
+          } catch {
             // Skip invalid selectors
             continue;
           }
@@ -90,8 +90,8 @@ export default function GlobalGrid({
           return true;
         }
       }
-    } catch (e) {
-      console.warn('Content detection error:', e);
+    } catch (error) {
+      console.warn('Content detection error:', error);
     }
     
     return false;
