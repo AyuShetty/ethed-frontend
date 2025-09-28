@@ -10,15 +10,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth-client";
 import { Loader2, Send, WalletIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FaGoogle, FaGithub } from "react-icons/fa";
 import { toast } from "sonner";
 import Image from "next/image";
-import { ethers } from "ethers";
+import { signIn, getSession } from "next-auth/react";
 import { SiweMessage } from "siwe";
+import { getAddress } from "viem";
 
 declare global {
   interface Window {
@@ -26,73 +26,75 @@ declare global {
   }
 }
 
-// Helper to get the current domain for SIWE
-const getSiweConfig = () => {
-  const isProduction = process.env.NODE_ENV === "production";
-  return {
-    domain: isProduction ? "ethed.com" : "localhost:3000",
-    origin: isProduction ? "https://ethed.com" : window.location.origin,
-  };
-};
-
 export default function LoginForm() {
   const [githubPending, startGitHubPending] = useTransition();
   const [googlePending, startGooglePending] = useTransition();
-  const [emailPending, startEmailPending] = useTransition();
-  const [email, setEmail] = useState("");
   const [siwePending, startSiwePending] = useTransition();
+  const [email, setEmail] = useState("");
+  const [emailPending, startEmailPending] = useTransition();
   const router = useRouter();
 
   async function signInWithGitHub() {
     startGitHubPending(async () => {
-      await authClient.signIn.social({
-        provider: "github",
-        callbackURL: "/",
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success("Signed in with GitHub!");
-          },
-          onError: (error) => {
-            toast.error(`GitHub sign-in error: ${error.error.message}`);
-          },
-        },
-      });
+      try {
+        const result = await signIn("github", {
+          callbackUrl: "/",
+          redirect: false,
+        });
+
+        if (result?.error) {
+          toast.error(`GitHub sign-in error: ${result.error}`);
+        } else if (result?.ok) {
+          toast.success("Signed in with GitHub!");
+          router.push("/");
+        }
+      } catch (error: any) {
+        toast.error("GitHub sign-in failed");
+      }
     });
   }
 
   async function signInWithGoogle() {
     startGooglePending(async () => {
-      await authClient.signIn.social({
-        provider: "google",
-        callbackURL: "/",
-        fetchOptions: {
-          onError: (error) => {
-            toast.error(`Google sign-in error: ${error.error.message}`);
-          },
-        },
-      });
+      try {
+        const result = await signIn("google", {
+          callbackUrl: "/",
+          redirect: false,
+        });
+
+        if (result?.error) {
+          toast.error(`Google sign-in error: ${result.error}`);
+        } else if (result?.ok) {
+          toast.success("Signed in with Google!");
+          router.push("/");
+        }
+      } catch (error: any) {
+        toast.error("Google sign-in failed");
+      }
     });
   }
 
   async function signInWithEmail() {
     startEmailPending(async () => {
-      await authClient.emailOtp.sendVerificationOtp({
-        email,
-        type: "sign-in",
-        fetchOptions: {
-          onSuccess: () => {
-            toast.success("Verification email sent!");
-            router.push(`/verify-request?email=${email}`);
-          },
-          onError: (error) => {
-            toast.error(`Email OTP error: ${error.error.message}`);
-          },
-        },
-      });
+      try {
+        const result = await signIn("email", {
+          email,
+          callbackUrl: "/",
+          redirect: false,
+        });
+
+        if (result?.error) {
+          toast.error(`Email sign-in error: ${result.error}`);
+        } else if (result?.ok) {
+          toast.success("Check your email for the sign-in link!");
+          router.push("/verify-request?email=" + encodeURIComponent(email));
+        }
+      } catch (error: any) {
+        toast.error("Email sign-in failed");
+      }
     });
   }
 
-  // Fixed SIWE Ethereum login
   async function signInWithEthereum() {
     startSiwePending(async () => {
       try {
@@ -102,101 +104,84 @@ export default function LoginForm() {
         }
 
         // Request wallet access
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const walletAddress = await signer.getAddress();
-
-        // Get current network
-        const network = await provider.getNetwork();
-        const chainId = Number(network.chainId);
-
-        console.log("🔗 Network info:", { chainId, name: network.name });
-
-        // Get SIWE config
-        const { domain, origin } = getSiweConfig();
-
-        // Get fresh nonce from better-auth - FIXED: use 'address' not 'walletAddress'
-        const { data: nonceData, error: nonceError } = await authClient.siwe.nonce({ 
-          address: walletAddress, 
-          chainId 
+        const accounts = await window.ethereum.request({ 
+          method: "eth_requestAccounts" 
         });
-        
-        if (nonceError || !nonceData?.nonce) {
-          console.error("❌ Nonce error:", nonceError);
+
+        if (!accounts || accounts.length === 0) {
+          throw new Error("No accounts found");
+        }
+
+        // Properly format the address with EIP-55 checksum
+        const rawAddress = accounts[0];
+        const address = getAddress(rawAddress); // This ensures proper EIP-55 checksumming
+
+        // Get chain ID
+        const chainId = await window.ethereum.request({
+          method: "eth_chainId",
+        });
+
+        console.log("🔗 Connected:", { address, chainId: parseInt(chainId, 16) });
+
+        // Get nonce from NextAuth
+        const nonceRes = await fetch("/api/auth/nonce");
+        if (!nonceRes.ok) {
           throw new Error("Failed to fetch nonce from server");
         }
-
-        console.log("🎲 Received nonce:", nonceData.nonce);
-
-        // Validate nonce format (should be alphanumeric)
-        if (!/^[A-Za-z0-9]+$/.test(nonceData.nonce)) {
-          console.error("❌ Invalid nonce format:", nonceData.nonce);
-          throw new Error("Invalid nonce format received from server");
+        
+        const { nonce } = await nonceRes.json();
+        if (!nonce) {
+          throw new Error("Failed to get nonce from server");
         }
 
-        // Create proper SIWE message
-        const siweMessage = new SiweMessage({
-          domain,
-          address: walletAddress,
-          statement: "Sign in with Ethereum to EthEd",
-          uri: origin,
+        console.log("🎲 Received nonce:", nonce);
+
+        // Create SIWE message with properly formatted address
+        const message = new SiweMessage({
+          domain: window.location.host,
+          address: address, // Use the checksummed address
+          statement: "Sign in to EthEd with your Ethereum account.",
+          uri: window.location.origin,
           version: "1",
-          chainId,
-          nonce: nonceData.nonce,
+          chainId: parseInt(chainId, 16),
+          nonce,
           issuedAt: new Date().toISOString(),
+          expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minutes
         });
 
-        // Prepare the message
-        const message = siweMessage.prepareMessage();
-        
-        console.log("📝 SIWE Message:", {
-          domain,
-          address: walletAddress,
-          chainId,
-          messageLength: message.length,
-          lineCount: message.split("\n").length,
-          nonce: nonceData.nonce
+        const messageText = message.prepareMessage();
+        console.log("📝 SIWE Message prepared:", messageText);
+
+        // Sign the message
+        const signature = await window.ethereum.request({
+          method: "personal_sign",
+          params: [messageText, address],
         });
 
-        console.log("📄 Full SIWE Message:\n", message);
+        console.log("✍️ Message signed");
 
-        // Validate message format before signing
-        try {
-          const parsedMessage = new SiweMessage(message);
-          console.log("✅ Message validation passed");
-        } catch (parseError) {
-          console.error("❌ Message validation failed:", parseError);
-          console.error("❌ Problematic message:", message);
-          throw new Error("Invalid SIWE message format");
-        }
-
-        // Request user signature
-        const signature = await signer.signMessage(message);
-        console.log("✍️ Message signed, signature length:", signature.length);
-
-        // Verify signature with better-auth - FIXED: use 'address' not 'walletAddress'
-        const { data: verifyData, error: verifyError } = await authClient.siwe.verify({
-          message,
+        // Sign in with NextAuth
+        const result = await signIn("siwe", {
+          message: JSON.stringify(message),
           signature,
-          address: walletAddress,
-          chainId,
+          redirect: false,
         });
 
-        if (verifyError) {
-          console.error("❌ SIWE verification error:", verifyError);
-          throw new Error(`SIWE verification failed: ${verifyError.message}`);
+        if (result?.error) {
+          console.error("❌ NextAuth SIWE error:", result.error);
+          throw new Error(result.error);
         }
 
-        if (!verifyData?.user) {
-          throw new Error("SIWE verification failed - no user data returned");
+        if (result?.ok) {
+          console.log("🎉 SIWE sign-in successful");
+          toast.success(`Welcome ${address.slice(0, 6)}...${address.slice(-4)}!`);
+          
+          // Force session refresh and redirect
+          await getSession();
+          router.push("/");
+        } else {
+          throw new Error("Unknown sign-in error");
         }
-
-        console.log("🎉 SIWE verification successful:", verifyData.user);
-        
-        toast.success(`Welcome ${verifyData.user.id}!`);
-        router.push("/");
 
       } catch (err: any) {
         console.error("🚨 Ethereum sign-in error:", err);
@@ -208,14 +193,14 @@ export default function LoginForm() {
           errorMessage = "User rejected the signature request";
         } else if (err.message?.includes("No Ethereum wallet")) {
           errorMessage = "Please install MetaMask or another Web3 wallet";
+        } else if (err.message?.includes("No accounts")) {
+          errorMessage = "Please connect your wallet first";
         } else if (err.message?.includes("nonce")) {
           errorMessage = "Failed to get authentication nonce. Please try again.";
-        } else if (err.message?.includes("Invalid message")) {
-          errorMessage = "Message format error. Please try again.";
-        } else if (err.message?.includes("verification failed")) {
+        } else if (err.message?.includes("verification")) {
           errorMessage = "Signature verification failed. Please try again.";
-        } else if (err.message?.includes("invalid nonce")) {
-          errorMessage = "Invalid authentication nonce. Please try again.";
+        } else if (err.message?.includes("EIP-55")) {
+          errorMessage = "Invalid address format. Please try reconnecting your wallet.";
         } else if (err.message) {
           errorMessage = err.message;
         }
@@ -332,12 +317,12 @@ export default function LoginForm() {
               {emailPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin mr-3" />
-                  Sending Code...
+                  Sending Link...
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-3" />
-                  Send Verification Code
+                  Send Sign-in Link
                 </>
               )}
             </Button>

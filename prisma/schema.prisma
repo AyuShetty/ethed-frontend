@@ -10,50 +10,53 @@ datasource db {
 
 model User {
   id            String   @id @default(uuid())
-  name          String
-  email         String   @unique
+  name          String?
+  email         String?  @unique
   emailVerified Boolean  @default(false)
   image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  sessions      Session[]
-  accounts      Account[]
-  wallets       WalletAddress[]
-  courses       Course[]
-  purchases     Purchase[]
-  payments      Payment[]
-  pet           Pet?
-
   role          String?
-  banned        Boolean? @default(false)
+  banned        Boolean  @default(false)
   banReason     String?
   banExpires    DateTime?
 
-  @@map("user")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // NextAuth SIWE / OAuth
+  sessions      Session[]
+  accounts      Account[]
+
+  // Wallets / ENS
+  wallets       WalletAddress[]
+
+  // LearningBuddy entities
+  pets          Pet[]
+  courses       UserCourse[]
+  purchases     Purchase[]
+  payments      Payment[]
+  nfts          NFT[]
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  userId      String
+  token       String   @unique
+  expiresAt   DateTime
+  ipAddress   String?
+  userAgent   String?
   impersonatedBy String?
 
-  @@map("session")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
   id                    String   @id @default(uuid())
   userId                String
-  accountId             String
   providerId            String
+  accountId             String
   accessToken           String?
   refreshToken          String?
   accessTokenExpiresAt  DateTime?
@@ -61,13 +64,13 @@ model Account {
   scope                 String?
   idToken               String?
   password              String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, accountId])
-  @@map("account")
 }
 
 model WalletAddress {
@@ -78,43 +81,41 @@ model WalletAddress {
   isPrimary Boolean  @default(false)
   ensName   String?
   ensAvatar String?
+
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([address, chainId])
 }
 
-model Verification {
-  id         String   @id @default(uuid())
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model Pet {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  level       Int      @default(1)
+  experience  Int      @default(0)
+  state       Json     // AI/interaction state
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
 
-  @@map("verification")
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Course {
   id          String      @id @default(uuid())
-  userId      String
   title       String
-  description String
-  fileKey     String
-  price       Int         // in cents
-  duration    Int         // in minutes
-  level       CourseLevel
-  category    String
-  smallDescription String
+  description String?
+  price       Int?        // in cents
+  level       CourseLevel @default(BEGINNER)
   slug        String      @unique
   status      CourseStatus @default(DRAFT)
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  updatedAt   DateTime    @default(now())
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lessons    Lesson[]
-  purchases  Purchase[]
+  lessons     Lesson[]
+  users       UserCourse[]
+  purchases   Purchase[]
 }
 
 model Lesson {
@@ -122,12 +123,26 @@ model Lesson {
   courseId  String
   title     String
   content   String
-  fileKey   String?
-  duration  Int      // in minutes
+  duration  Int?     // minutes
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now())
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model UserCourse {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  progress  Int      @default(0) // percent
+  completed Boolean  @default(false)
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
 }
 
 model Purchase {
@@ -135,40 +150,40 @@ model Purchase {
   userId    String
   courseId  String
   amount    Int            // in cents
-  status    PurchaseStatus
-  txHash    String?        // Polygon / X402 transaction hash
-  paymentId String?        // optional reference to micropayment record
+  status    PurchaseStatus @default(PENDING)
+  txHash    String?        // Polygon / x402 transaction
+  paymentId String?        // optional link to Payment
   createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  updatedAt DateTime       @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
-  id          String    @id @default(uuid())
-  userId      String
-  amount      Int       // in cents
-  chainId     Int       // blockchain network ID
-  txHash      String
-  status      PaymentStatus
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String        @id @default(uuid())
+  userId    String
+  amount    Int           // cents
+  chainId   Int
+  txHash    String
+  type      PaymentType
+  status    PaymentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Pet {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  name        String
-  level       Int      @default(1)
-  experience  Int      @default(0)
-  state       Json     // AI pet state (reinforced environment)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model NFT {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenId   String
+  name      String
+  image     String
+  metadata  Json?
+  createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum CourseLevel {
@@ -193,4 +208,9 @@ enum PaymentStatus {
   PENDING
   COMPLETED
   FAILED
+}
+
+enum PaymentType {
+  MICROPAYMENT
+  SUBSCRIPTION
 }
