@@ -20,10 +20,33 @@ import { signIn, getSession } from "next-auth/react";
 import { SiweMessage } from "siwe";
 import { getAddress } from "viem";
 
+// Proper Ethereum provider types
+interface EthereumProvider {
+  request: (args: {
+    method: string;
+    params?: unknown[];
+  }) => Promise<unknown>;
+  on?: (eventName: string, handler: (data: unknown) => void) => void;
+  removeListener?: (eventName: string, handler: (data: unknown) => void) => void;
+}
+
 declare global {
   interface Window {
     ethereum?: any;
   }
+}
+
+// Error types for better error handling
+interface EthereumError extends Error {
+  code?: number;
+  data?: unknown;
+}
+
+interface SignInResult {
+  error?: string;
+  ok?: boolean;
+  status?: number;
+  url?: string | null;
 }
 
 export default function LoginForm() {
@@ -40,7 +63,7 @@ export default function LoginForm() {
         const result = await signIn("github", {
           callbackUrl: "/",
           redirect: false,
-        });
+        }) as SignInResult | undefined;
 
         if (result?.error) {
           toast.error(`GitHub sign-in error: ${result.error}`);
@@ -48,7 +71,8 @@ export default function LoginForm() {
           toast.success("Signed in with GitHub!");
           router.push("/");
         }
-      } catch (error: any) {
+      } catch (error) {
+        console.error("GitHub sign-in error:", error);
         toast.error("GitHub sign-in failed");
       }
     });
@@ -60,7 +84,7 @@ export default function LoginForm() {
         const result = await signIn("google", {
           callbackUrl: "/",
           redirect: false,
-        });
+        }) as SignInResult | undefined;
 
         if (result?.error) {
           toast.error(`Google sign-in error: ${result.error}`);
@@ -68,7 +92,8 @@ export default function LoginForm() {
           toast.success("Signed in with Google!");
           router.push("/");
         }
-      } catch (error: any) {
+      } catch (error) {
+        console.error("Google sign-in error:", error);
         toast.error("Google sign-in failed");
       }
     });
@@ -81,7 +106,7 @@ export default function LoginForm() {
           email,
           callbackUrl: "/",
           redirect: false,
-        });
+        }) as SignInResult | undefined;
 
         if (result?.error) {
           toast.error(`Email sign-in error: ${result.error}`);
@@ -89,7 +114,8 @@ export default function LoginForm() {
           toast.success("Check your email for the sign-in link!");
           router.push("/verify-request?email=" + encodeURIComponent(email));
         }
-      } catch (error: any) {
+      } catch (error) {
+        console.error("Email sign-in error:", error);
         toast.error("Email sign-in failed");
       }
     });
@@ -104,24 +130,31 @@ export default function LoginForm() {
         }
 
         // Request wallet access
-        const accounts = await window.ethereum.request({ 
+        const accountsResult = await window.ethereum.request({ 
           method: "eth_requestAccounts" 
         });
 
-        if (!accounts || accounts.length === 0) {
+        // Type guard for accounts array
+        if (!Array.isArray(accountsResult) || accountsResult.length === 0) {
           throw new Error("No accounts found");
         }
+
+        const accounts = accountsResult as string[];
 
         // Properly format the address with EIP-55 checksum
         const rawAddress = accounts[0];
         const address = getAddress(rawAddress); // This ensures proper EIP-55 checksumming
 
         // Get chain ID
-        const chainId = await window.ethereum.request({
+        const chainIdResult = await window.ethereum.request({
           method: "eth_chainId",
         });
 
-        console.log("🔗 Connected:", { address, chainId: parseInt(chainId, 16) });
+        const chainId = typeof chainIdResult === 'string' 
+          ? parseInt(chainIdResult, 16) 
+          : Number(chainIdResult);
+
+        console.log("🔗 Connected:", { address, chainId });
 
         // Get nonce from NextAuth
         const nonceRes = await fetch("/api/auth/nonce");
@@ -129,7 +162,9 @@ export default function LoginForm() {
           throw new Error("Failed to fetch nonce from server");
         }
         
-        const { nonce } = await nonceRes.json();
+        const nonceData = await nonceRes.json() as { nonce?: string };
+        const { nonce } = nonceData;
+        
         if (!nonce) {
           throw new Error("Failed to get nonce from server");
         }
@@ -143,7 +178,7 @@ export default function LoginForm() {
           statement: "Sign in to EthEd with your Ethereum account.",
           uri: window.location.origin,
           version: "1",
-          chainId: parseInt(chainId, 16),
+          chainId: chainId,
           nonce,
           issuedAt: new Date().toISOString(),
           expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minutes
@@ -153,11 +188,12 @@ export default function LoginForm() {
         console.log("📝 SIWE Message prepared:", messageText);
 
         // Sign the message
-        const signature = await window.ethereum.request({
+        const signatureResult = await window.ethereum.request({
           method: "personal_sign",
           params: [messageText, address],
         });
 
+        const signature = signatureResult as string;
         console.log("✍️ Message signed");
 
         // Sign in with NextAuth
@@ -165,7 +201,7 @@ export default function LoginForm() {
           message: JSON.stringify(message),
           signature,
           redirect: false,
-        });
+        }) as SignInResult | undefined;
 
         if (result?.error) {
           console.error("❌ NextAuth SIWE error:", result.error);
@@ -183,26 +219,29 @@ export default function LoginForm() {
           throw new Error("Unknown sign-in error");
         }
 
-      } catch (err: any) {
+      } catch (err) {
         console.error("🚨 Ethereum sign-in error:", err);
+        
+        // Type guard for Ethereum errors
+        const error = err as EthereumError;
         
         // Provide user-friendly error messages
         let errorMessage = "Ethereum login failed";
         
-        if (err.code === 4001) {
+        if (error.code === 4001) {
           errorMessage = "User rejected the signature request";
-        } else if (err.message?.includes("No Ethereum wallet")) {
+        } else if (error.message?.includes("No Ethereum wallet")) {
           errorMessage = "Please install MetaMask or another Web3 wallet";
-        } else if (err.message?.includes("No accounts")) {
+        } else if (error.message?.includes("No accounts")) {
           errorMessage = "Please connect your wallet first";
-        } else if (err.message?.includes("nonce")) {
+        } else if (error.message?.includes("nonce")) {
           errorMessage = "Failed to get authentication nonce. Please try again.";
-        } else if (err.message?.includes("verification")) {
+        } else if (error.message?.includes("verification")) {
           errorMessage = "Signature verification failed. Please try again.";
-        } else if (err.message?.includes("EIP-55")) {
+        } else if (error.message?.includes("EIP-55")) {
           errorMessage = "Invalid address format. Please try reconnecting your wallet.";
-        } else if (err.message) {
-          errorMessage = err.message;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         
         toast.error(errorMessage);

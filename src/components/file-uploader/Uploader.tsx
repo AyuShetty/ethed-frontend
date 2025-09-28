@@ -306,7 +306,7 @@ export default function Uploader({
 
     let completedCount = 0;
     const totalFiles = pendingFiles.length;
-    let updatedFiles = [...files];
+    const updatedFiles = [...files];
 
     try {
       // Set all pending files to uploading
