@@ -19,19 +19,28 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { ethers } from "ethers";
 import { SiweMessage } from "siwe";
+
 declare global {
   interface Window {
     ethereum?: any;
   }
 }
 
+// Helper to get the current domain for SIWE
+const getSiweConfig = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    domain: isProduction ? "ethed.com" : "localhost:3000",
+    origin: isProduction ? "https://ethed.com" : window.location.origin,
+  };
+};
 
 export default function LoginForm() {
   const [githubPending, startGitHubPending] = useTransition();
   const [googlePending, startGooglePending] = useTransition();
   const [emailPending, startEmailPending] = useTransition();
   const [email, setEmail] = useState("");
-    const [siwePending, startSiwePending] = useTransition();
+  const [siwePending, startSiwePending] = useTransition();
   const router = useRouter();
 
   async function signInWithGitHub() {
@@ -83,53 +92,135 @@ export default function LoginForm() {
     });
   }
 
-    // SIWE Ethereum login
+  // Fixed SIWE Ethereum login
   async function signInWithEthereum() {
     startSiwePending(async () => {
       try {
-        if (!window.ethereum) throw new Error("No Ethereum wallet found");
+        // Check for Ethereum provider
+        if (!window.ethereum) {
+          throw new Error("No Ethereum wallet found. Please install MetaMask or another Web3 wallet.");
+        }
+
+        // Request wallet access
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const walletAddress = await signer.getAddress();
 
-        // 1️⃣ Get nonce from backend
-        const { data: nonceData } = await authClient.siwe.nonce({
-          walletAddress,
-          chainId: 137, // Polygon
+        // Get current network
+        const network = await provider.getNetwork();
+        const chainId = Number(network.chainId);
+
+        console.log("🔗 Network info:", { chainId, name: network.name });
+
+        // Get SIWE config
+        const { domain, origin } = getSiweConfig();
+
+        // Get fresh nonce from better-auth - FIXED: use 'address' not 'walletAddress'
+        const { data: nonceData, error: nonceError } = await authClient.siwe.nonce({ 
+          address: walletAddress, 
+          chainId 
         });
-        if (!nonceData) throw new Error("Failed to fetch nonce");
+        
+        if (nonceError || !nonceData?.nonce) {
+          console.error("❌ Nonce error:", nonceError);
+          throw new Error("Failed to fetch nonce from server");
+        }
 
-        const nonce = nonceData.nonce;
+        console.log("🎲 Received nonce:", nonceData.nonce);
 
-        // 2️⃣ Create SIWE message
-        const domain = window.location.host;
-// After fetching nonce
-const message = new SiweMessage({
-  domain: window.location.host,
-  address: walletAddress,
-  statement: 'Sign in to MyApp',
-  uri: window.location.origin,
-  version: '1',
-  chainId: 137,
-  nonce: nonce,
-  issuedAt: new Date().toISOString(),
-}).prepareMessage();
+        // Validate nonce format (should be alphanumeric)
+        if (!/^[A-Za-z0-9]+$/.test(nonceData.nonce)) {
+          console.error("❌ Invalid nonce format:", nonceData.nonce);
+          throw new Error("Invalid nonce format received from server");
+        }
 
-const signature = await signer.signMessage(message);
+        // Create proper SIWE message
+        const siweMessage = new SiweMessage({
+          domain,
+          address: walletAddress,
+          statement: "Sign in with Ethereum to EthEd",
+          uri: origin,
+          version: "1",
+          chainId,
+          nonce: nonceData.nonce,
+          issuedAt: new Date().toISOString(),
+        });
 
-const { data: verifyData } = await authClient.siwe.verify({
-  message,
-  signature,
-  walletAddress,
-  chainId: 137,
-});
+        // Prepare the message
+        const message = siweMessage.prepareMessage();
+        
+        console.log("📝 SIWE Message:", {
+          domain,
+          address: walletAddress,
+          chainId,
+          messageLength: message.length,
+          lineCount: message.split("\n").length,
+          nonce: nonceData.nonce
+        });
 
-        if (!verifyData) throw new Error("SIWE verification failed");
+        console.log("📄 Full SIWE Message:\n", message);
 
-        toast.success(`Welcome ${verifyData.user.id || "User"}!`);
+        // Validate message format before signing
+        try {
+          const parsedMessage = new SiweMessage(message);
+          console.log("✅ Message validation passed");
+        } catch (parseError) {
+          console.error("❌ Message validation failed:", parseError);
+          console.error("❌ Problematic message:", message);
+          throw new Error("Invalid SIWE message format");
+        }
+
+        // Request user signature
+        const signature = await signer.signMessage(message);
+        console.log("✍️ Message signed, signature length:", signature.length);
+
+        // Verify signature with better-auth - FIXED: use 'address' not 'walletAddress'
+        const { data: verifyData, error: verifyError } = await authClient.siwe.verify({
+          message,
+          signature,
+          address: walletAddress,
+          chainId,
+        });
+
+        if (verifyError) {
+          console.error("❌ SIWE verification error:", verifyError);
+          throw new Error(`SIWE verification failed: ${verifyError.message}`);
+        }
+
+        if (!verifyData?.user) {
+          throw new Error("SIWE verification failed - no user data returned");
+        }
+
+        console.log("🎉 SIWE verification successful:", verifyData.user);
+        
+        toast.success(`Welcome ${verifyData.user.id}!`);
+        router.push("/");
+
       } catch (err: any) {
-        console.error(err);
-        toast.error(err.message || "Ethereum login failed");
+        console.error("🚨 Ethereum sign-in error:", err);
+        
+        // Provide user-friendly error messages
+        let errorMessage = "Ethereum login failed";
+        
+        if (err.code === 4001) {
+          errorMessage = "User rejected the signature request";
+        } else if (err.message?.includes("No Ethereum wallet")) {
+          errorMessage = "Please install MetaMask or another Web3 wallet";
+        } else if (err.message?.includes("nonce")) {
+          errorMessage = "Failed to get authentication nonce. Please try again.";
+        } else if (err.message?.includes("Invalid message")) {
+          errorMessage = "Message format error. Please try again.";
+        } else if (err.message?.includes("verification failed")) {
+          errorMessage = "Signature verification failed. Please try again.";
+        } else if (err.message?.includes("invalid nonce")) {
+          errorMessage = "Invalid authentication nonce. Please try again.";
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        toast.error(errorMessage);
       }
     });
   }
@@ -190,15 +281,18 @@ const { data: verifyData } = await authClient.siwe.verify({
               <span className="ml-3">Continue with Google</span>
             </Button>
 
-                        <Button
+            <Button
               disabled={siwePending}
               onClick={signInWithEthereum}
-              className="w-full h-12 bg-gradient-to-r from-yellow-500/90 via-yellow-400/90 to-yellow-500/90 hover:from-yellow-400/90 hover:via-yellow-300/90 hover:to-yellow-400/90 border border-yellow-400/30 hover:border-yellow-300/50 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
+              className="w-full h-12 bg-gradient-to-r from-purple-600/90 via-purple-500/90 to-purple-600/90 hover:from-purple-500/90 hover:via-purple-400/90 hover:to-purple-500/90 border border-purple-500/30 hover:border-purple-400/50 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
             >
-              {siwePending ? <Loader2 className="h-5 w-5 animate-spin text-yellow-100" /> : <WalletIcon className="h-5 w-5 text-yellow-100" />}
+              {siwePending ? (
+                <Loader2 className="h-5 w-5 animate-spin text-purple-100" />
+              ) : (
+                <WalletIcon className="h-5 w-5 text-purple-100" />
+              )}
               <span className="ml-3">Sign in with Ethereum</span>
             </Button>
-
           </div>
 
           {/* Divider */}

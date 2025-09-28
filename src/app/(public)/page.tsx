@@ -6,6 +6,11 @@ import { ArrowRight, ChevronRight, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
 import EthEdFeatures from './_components/features';
+import Link from 'next/link';
+import { Rocket, Wallet, MessageCircle, ShieldCheck, Globe, Coins } from 'lucide-react';
+import X402Banner from './_components/x402-banner';
+import HowItWorks from './_components/how-it-works';
+import Stats from './_components/stats';
 
 export default function EthEdHero() {
   return (
@@ -70,25 +75,43 @@ export default function EthEdHero() {
             data-text-content
           >
             <Button
+              asChild
               size="lg"
               className="group bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-900 hover:from-cyan-400 hover:to-blue-500 hover:text-white relative overflow-hidden rounded-full px-6 shadow-lg transition-all duration-300"
               onClick={() => window.location.href = '/login'}
             >
-              <span className="relative z-10 flex items-center">
-                Start Learning
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </span>
-              <span className="from-blue-300 via-cyan-400/90 to-emerald-300/80 absolute inset-0 z-0 bg-gradient-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
+              <Link href="/onboarding">
+                <span className="relative z-10 flex items-center">
+                  Start Learning
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </span>
+                <span className="from-blue-300 via-cyan-400/90 to-emerald-300/80 absolute inset-0 z-0 bg-gradient-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
+              </Link>
             </Button>
 
             <Button
+              asChild
               variant="outline"
               size="lg"
               className="border-cyan-400/70 bg-black/30 flex items-center gap-2 rounded-full text-cyan-100 hover:bg-emerald-400/10 hover:text-white backdrop-blur-sm"
               onClick={() => window.location.href = '/courses'}
             >
-              <GraduationCap className="h-4 w-4" />
-              Browse Courses
+              <Link href="/admin/courses">
+                <GraduationCap className="h-4 w-4" />
+                Browse Courses
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              size="lg"
+              className="text-cyan-200 hover:text-white hover:bg-cyan-500/10 rounded-full"
+            >
+              <Link href="/pricing">
+                <Coins className="h-4 w-4 mr-2" />
+                Pricing & x402
+              </Link>
             </Button>
           </motion.div>
 
@@ -129,10 +152,31 @@ export default function EthEdHero() {
               <div className="h-full w-full rounded-md bg-cyan-500/20"></div>
             </div>
           </motion.div>
+
+          {/* Trusted strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="mt-10"
+          >
+            <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-4 rounded-xl border border-cyan-300/20 bg-black/30 px-4 py-3 text-xs text-slate-400 backdrop-blur-sm">
+              <span className="text-slate-300">Powered by</span>
+              <span className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-emerald-200">ENS</span>
+              <span className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-cyan-200">Polygon Amoy</span>
+              <span className="rounded-full border border-blue-300/30 bg-blue-400/10 px-3 py-1 text-blue-200">x402 Agentic Payments</span>
+              <span className="rounded-full border border-teal-300/30 bg-teal-400/10 px-3 py-1 text-teal-200">AI Buddy</span>
+            </div>
+          </motion.div>
         </div>
       </div>
 
       <EthEdFeatures/>
+
+      {/* x402 banner + How it works + Stats */}
+      <X402Banner />
+      <HowItWorks />
+      <Stats />
     </div>
   );
 }
