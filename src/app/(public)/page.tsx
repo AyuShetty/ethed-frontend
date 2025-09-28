@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { ArrowRight, ChevronRight, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'motion/react';
@@ -77,6 +78,7 @@ export default function EthEdHero() {
               asChild
               size="lg"
               className="group bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-900 hover:from-cyan-400 hover:to-blue-500 hover:text-white relative overflow-hidden rounded-full px-6 shadow-lg transition-all duration-300"
+              onClick={() => window.location.href = '/login'}
             >
               <Link href="/onboarding">
                 <span className="relative z-10 flex items-center">
@@ -92,6 +94,7 @@ export default function EthEdHero() {
               variant="outline"
               size="lg"
               className="border-cyan-400/70 bg-black/30 flex items-center gap-2 rounded-full text-cyan-100 hover:bg-emerald-400/10 hover:text-white backdrop-blur-sm"
+              onClick={() => window.location.href = '/courses'}
             >
               <Link href="/admin/courses">
                 <GraduationCap className="h-4 w-4" />
@@ -136,11 +139,6 @@ export default function EthEdHero() {
                 </div>
               </div>
               <div className="relative">
-                <img
-                  src="https://i.postimg.cc/0yk8Vz7t/dashboard.webp"
-                  alt="EthEd Platform Demo"
-                  className="w-full"
-                />
                 <div className="from-background absolute inset-0 bg-gradient-to-t to-transparent opacity-0"></div>
               </div>
             </div>

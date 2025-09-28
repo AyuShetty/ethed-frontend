@@ -3,7 +3,6 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import Navbar from "@/components/EthNavbar";
 import AgentHover from "@/components/AgentHover";
 import GlobalGrid from "@/components/GlobalGrid";
 
