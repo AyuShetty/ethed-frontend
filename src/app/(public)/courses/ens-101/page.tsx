@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Play, FileText, Code, Clock, Award } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, FileText, Code, CheckCircle, Clock, Award, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -71,7 +70,9 @@ export default function ENS101Course() {
 
   const completionPercentage = (completedModules.size / courseModules.length) * 100;
 
-  // We'll be using Link components instead of direct navigation
+  const handleModuleClick = (moduleId: number) => {
+    window.location.href = `/courses/ens-101/lesson/${moduleId}`;
+  };
 
   return (
     <div className="bg-background relative w-full overflow-hidden min-h-screen">
@@ -89,12 +90,10 @@ export default function ENS101Course() {
           <Button 
             variant="ghost" 
             className="mb-4 text-cyan-400 hover:text-cyan-300"
-            asChild
+            onClick={() => window.location.href = '/courses'}
           >
-            <Link href="/courses">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Courses
-            </Link>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Courses
           </Button>
           <div className="flex flex-col lg:flex-row lg:items-start gap-8">
             <div className="flex-1">
@@ -176,7 +175,7 @@ export default function ENS101Course() {
                     : 'bg-gradient-to-r from-slate-900/30 to-slate-800/30 border-slate-600/20 opacity-60'
                   }
                 `}
-                onClick={() => isAvailable && (window.location.href = `/courses/ens-101/lesson/${module.id}`)}
+                onClick={() => isAvailable && handleModuleClick(module.id)}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
