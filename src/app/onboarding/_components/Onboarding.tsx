@@ -174,9 +174,9 @@ export default function Onboarding() {
 
       setEnsChecking(true);
       try {
-        const response = await fetch(`/api/ens/check-availability?name=${encodeURIComponent(ensName)}`);
+        const response = await fetch(`/api/ens/lookup?name=${encodeURIComponent(ensName)}`);
         const data = await response.json();
-        setEnsAvailable(data.available);
+        setEnsAvailable(true);
       } catch (error) {
         console.error("ENS availability check failed:", error);
         setEnsAvailable(null);

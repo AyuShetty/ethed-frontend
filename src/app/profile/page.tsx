@@ -1,4 +1,4 @@
-import ProfilePortfolio from "../_components/ProfilePortfolio";
+import ProfilePortfolio from "./_components/ProfilePortfolio";
 
 interface Props {
   params: { handle: string };
