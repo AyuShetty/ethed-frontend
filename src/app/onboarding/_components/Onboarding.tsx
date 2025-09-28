@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Confetti from "react-confetti";
 import {
   Sparkles,
@@ -22,9 +23,13 @@ import {
   Crown,
   Star,
   Zap,
+  CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useENSLookup } from "@/hooks/use-ens-lookup";
 
 interface Buddy {
   id: string;
@@ -50,8 +55,7 @@ const buddyOptions: Buddy[] = [
     name: "Spark",
     emoji: "🐉",
     personality: "Wise Mentor",
-    greeting:
-      "Greetings, future scholar! I'm Spark, your dragon guide. Together, we'll unlock the mysteries of knowledge! 🔥✨",
+    greeting: "Greetings, future scholar! I'm Spark, your dragon guide. Together, we'll unlock the mysteries of knowledge! 🔥✨",
     traits: ["Wisdom", "Leadership", "Ancient Knowledge"],
     rarity: "Legendary",
   },
@@ -60,8 +64,7 @@ const buddyOptions: Buddy[] = [
     name: "Cypher",
     emoji: "🦊",
     personality: "Tech Genius",
-    greeting:
-      "Hey there, code explorer! I'm Cypher, and I live in the digital realm. Ready to hack some knowledge? 💻⚡",
+    greeting: "Hey there, code explorer! I'm Cypher, and I live in the digital realm. Ready to hack some knowledge? 💻⚡",
     traits: ["Innovation", "Quick Learning", "Problem Solving"],
     rarity: "Epic",
   },
@@ -70,8 +73,7 @@ const buddyOptions: Buddy[] = [
     name: "Professor Hoot",
     emoji: "🦉",
     personality: "Academic Scholar",
-    greeting:
-      "Greetings, my dear student! Professor Hoot at your service. Knowledge is power, and we shall gather plenty! 📚🎓",
+    greeting: "Greetings, my dear student! Professor Hoot at your service. Knowledge is power, and we shall gather plenty! 📚🎓",
     traits: ["Research", "Analysis", "Deep Thinking"],
     rarity: "Rare",
   },
@@ -80,8 +82,7 @@ const buddyOptions: Buddy[] = [
     name: "Luna",
     emoji: "🐱",
     personality: "Creative Explorer",
-    greeting:
-      "Meow! I'm Luna, your cosmic companion! Let's explore the universe of learning together! 🌟🚀",
+    greeting: "Meow! I'm Luna, your cosmic companion! Let's explore the universe of learning together! 🌟🚀",
     traits: ["Creativity", "Curiosity", "Independence"],
     rarity: "Common",
   },
@@ -89,47 +90,60 @@ const buddyOptions: Buddy[] = [
 
 const getRarityColor = (rarity: string) => {
   switch (rarity) {
-    case "Legendary":
-      return "from-yellow-400 to-orange-500";
-    case "Epic":
-      return "from-purple-400 to-pink-500";
-    case "Rare":
-      return "from-blue-400 to-cyan-500";
-    default:
-      return "from-green-400 to-emerald-500";
+    case "Legendary": return "from-yellow-400 to-orange-500";
+    case "Epic": return "from-purple-400 to-pink-500";
+    case "Rare": return "from-blue-400 to-cyan-500";
+    default: return "from-green-400 to-emerald-500";
   }
 };
 
 const getRarityIcon = (rarity: string) => {
   switch (rarity) {
-    case "Legendary":
-      return <Crown className="w-4 h-4" />;
-    case "Epic":
-      return <Star className="w-4 h-4" />;
-    case "Rare":
-      return <Zap className="w-4 h-4" />;
-    default:
-      return <Heart className="w-4 h-4" />;
+    case "Legendary": return <Crown className="w-4 h-4" />;
+    case "Epic": return <Star className="w-4 h-4" />;
+    case "Rare": return <Zap className="w-4 h-4" />;
+    default: return <Heart className="w-4 h-4" />;
   }
 };
 
 export default function Onboarding() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { lookupByAddress } = useENSLookup();
+
   const [step, setStep] = useState(0);
   const [selectedBuddy, setSelectedBuddy] = useState<Buddy>(buddyOptions[0]);
   const [ensName, setEnsName] = useState("");
+  const [ensAvailable, setEnsAvailable] = useState<boolean | null>(null);
+  const [ensChecking, setEnsChecking] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [nftsMinted, setNftsMinted] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  const router = useRouter();
+  const [createdPet, setCreatedPet] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Auto-generate ENS name
+  // Auto-generate initial ENS name
   useEffect(() => {
-    const randomSuffix = Math.random().toString(36).substring(2, 6);
-    setEnsName(`learner-${randomSuffix}`);
-  }, []);
+    if (session?.user && !ensName) {
+      let baseName = '';
+      
+      if (session.address) {
+        // For wallet users, use address-based name
+        baseName = `learner-${session.address.slice(-4)}`;
+      } else if (session.user.name) {
+        // For social users, use their name
+        baseName = session.user.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      } else {
+        // Fallback random name
+        baseName = `learner-${Math.random().toString(36).substring(2, 6)}`;
+      }
+      
+      setEnsName(baseName);
+    }
+  }, [session, ensName]);
 
   // Update progress
   useEffect(() => {
@@ -149,6 +163,31 @@ export default function Onboarding() {
       setChatMessages([welcomeMessage]);
     }
   }, [step, selectedBuddy, chatMessages.length]);
+
+  // Check ENS availability when name changes
+  useEffect(() => {
+    const checkENSAvailability = async () => {
+      if (ensName.length < 3) {
+        setEnsAvailable(null);
+        return;
+      }
+
+      setEnsChecking(true);
+      try {
+        const response = await fetch(`/api/ens/check-availability?name=${encodeURIComponent(ensName)}`);
+        const data = await response.json();
+        setEnsAvailable(data.available);
+      } catch (error) {
+        console.error("ENS availability check failed:", error);
+        setEnsAvailable(null);
+      } finally {
+        setEnsChecking(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(checkENSAvailability, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [ensName]);
 
   const handleBuddySelect = (buddy: Buddy) => {
     setSelectedBuddy(buddy);
@@ -205,59 +244,177 @@ export default function Onboarding() {
     }, 1500);
   };
 
-  const simulateENSMinting = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+  const createPetInBackend = async () => {
+    try {
+      setIsLoading(true);
 
-    const ensMessage: ChatMessage = {
-      id: Date.now().toString(),
-      sender: "buddy",
-      message: `🎉 Congratulations! Your ENS name ${ensName}.ethed.eth has been reserved! You now have your unique identity in the EthEd ecosystem!`,
-      timestamp: new Date(),
-      emotion: "proud",
-    };
+      const response = await fetch("/api/user/pets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selectedBuddy.name,
+          petType: selectedBuddy.id,
+        }),
+      });
 
-    setChatMessages((prev) => [...prev, ensMessage]);
-    setNftsMinted((prev) => [...prev, "ens-pioneer"]);
-    toast.success(`🌐 ENS ${ensName}.ethed.eth reserved successfully!`);
-    setIsLoading(false);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create pet");
+      }
 
-    setTimeout(() => setStep(3), 1500);
+      const data = await response.json();
+      setCreatedPet(data.pet);
+      
+      const petMessage: ChatMessage = {
+        id: Date.now().toString(),
+        sender: "buddy",
+        message: `🎉 Wonderful! I'm now officially your learning companion! Let's continue setting up your EthEd identity!`,
+        timestamp: new Date(),
+        emotion: "excited",
+      };
+
+      setChatMessages((prev) => [...prev, petMessage]);
+      toast.success(`${selectedBuddy.name} is now your learning buddy!`);
+      
+      setTimeout(() => setStep(2), 1500);
+
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create pet");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const simulateWelcomeNFT = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+  const registerENSSubdomain = async () => {
+    if (!ensAvailable) {
+      toast.error("Please choose an available ENS name");
+      return;
+    }
 
-    setShowConfetti(true);
-    setNftsMinted((prev) => [...prev, "genesis-scholar", "buddy-bond"]);
+    try {
+      setIsLoading(true);
 
-    const nftMessage: ChatMessage = {
-      id: Date.now().toString(),
-      sender: "buddy",
-      message: `🏆 Amazing! You've just minted your Genesis Scholar NFT and our Buddy Bond NFT! These represent the beginning of your incredible learning journey with me!`,
-      timestamp: new Date(),
-      emotion: "excited",
-    };
+      // Check if user already has an ENS name and update it
+      const response = await fetch("/api/user/ens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subdomain: ensName,
+          buddyId: selectedBuddy.id,
+        }),
+      });
 
-    setChatMessages((prev) => [...prev, nftMessage]);
-    toast.success("🎉 Genesis NFTs minted successfully!");
-    setIsLoading(false);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to register ENS");
+      }
 
-    setTimeout(() => {
-      setShowConfetti(false);
-      setStep(4);
-    }, 4000);
+      const data = await response.json();
+
+      const ensMessage: ChatMessage = {
+        id: Date.now().toString(),
+        sender: "buddy",
+        message: `🎉 Congratulations! Your ENS name ${ensName}.ethed.eth has been registered! You now have your unique identity in the EthEd ecosystem!`,
+        timestamp: new Date(),
+        emotion: "proud",
+      };
+
+      setChatMessages((prev) => [...prev, ensMessage]);
+      setNftsMinted((prev) => [...prev, "ens-pioneer"]);
+      toast.success(`🌐 ENS ${ensName}.ethed.eth registered successfully!`);
+      
+      setTimeout(() => setStep(3), 1500);
+
+    } catch (error: any) {
+      toast.error(error.message || "Failed to register ENS");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const completeOnboarding = () => {
-    // Store user preferences
-    localStorage.setItem("selectedBuddy", JSON.stringify(selectedBuddy));
-    localStorage.setItem("ensName", `${ensName}.ethed.eth`);
-    localStorage.setItem("nftCollection", JSON.stringify(nftsMinted));
-    localStorage.setItem("onboardingComplete", "true");
+  const mintGenesisNFTs = async () => {
+    try {
+      setIsLoading(true);
 
-    router.push("/pricing");
+      const response = await fetch("/api/user/nfts/genesis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          petId: createdPet?.id,
+          ensName: `${ensName}.ethed.eth`,
+          buddyType: selectedBuddy.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to mint NFTs");
+      }
+
+      const data = await response.json();
+
+      setShowConfetti(true);
+      setNftsMinted((prev) => [...prev, "genesis-scholar", "buddy-bond"]);
+
+      const nftMessage: ChatMessage = {
+        id: Date.now().toString(),
+        sender: "buddy",
+        message: `🏆 Amazing! You've just minted your Genesis Scholar NFT and our Buddy Bond NFT! These represent the beginning of your incredible learning journey with me!`,
+        timestamp: new Date(),
+        emotion: "excited",
+      };
+
+      setChatMessages((prev) => [...prev, nftMessage]);
+      toast.success("🎉 Genesis NFTs minted successfully!");
+
+      setTimeout(() => {
+        setShowConfetti(false);
+        setStep(4);
+      }, 4000);
+
+    } catch (error: any) {
+      toast.error(error.message || "Failed to mint NFTs");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateUserProfile = async () => {
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          onboardingCompleted: true,
+          selectedBuddy: selectedBuddy.id,
+          ensName: `${ensName}.ethed.eth`,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update profile");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error("Profile update failed:", error);
+      throw error;
+    }
+  };
+
+  const completeOnboarding = async () => {
+    try {
+      await updateUserProfile();
+      
+      toast.success("Welcome to EthEd! Your journey begins now.", {
+        duration: 5000,
+      });
+      
+      router.push("/pricing");
+    } catch (error: any) {
+      toast.error("Failed to complete onboarding. Please try again.");
+    }
   };
 
   const stepVariants = {
@@ -312,6 +469,27 @@ export default function Onboarding() {
                         Welcome to EthEd - where learning meets blockchain technology!
                         You're about to embark on an incredible journey of knowledge and growth.
                       </p>
+                      
+                      {session?.user && (
+                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-emerald-400 font-medium">
+                                Signed in as {session.user.name || session.user.email}
+                              </p>
+                              {session.address && (
+                                <p className="text-xs text-slate-400">
+                                  Wallet: {session.address.slice(0, 6)}...{session.address.slice(-4)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
                           <PawPrint className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
@@ -326,11 +504,8 @@ export default function Onboarding() {
                           <p className="text-sm text-slate-300">Mint NFTs</p>
                         </div>
                       </div>
-                      <Button
-                        onClick={() => setStep(1)}
-                        size="lg"
-                        className="w-full"
-                      >
+                      
+                      <Button onClick={() => setStep(1)} size="lg" className="w-full">
                         Start My Journey <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </CardContent>
@@ -379,9 +554,7 @@ export default function Onboarding() {
                               </p>
                               <Badge
                                 variant="outline"
-                                className={`text-xs bg-gradient-to-r ${getRarityColor(
-                                  buddy.rarity
-                                )}`}
+                                className={`text-xs bg-gradient-to-r ${getRarityColor(buddy.rarity)}`}
                               >
                                 {getRarityIcon(buddy.rarity)}
                                 <span className="ml-1">{buddy.rarity}</span>
@@ -394,12 +567,21 @@ export default function Onboarding() {
                       {chatMessages.length > 0 && (
                         <div className="mt-4">
                           <Button
-                            onClick={() => setStep(2)}
+                            onClick={createPetInBackend}
                             size="lg"
                             className="w-full"
+                            disabled={isLoading}
                           >
-                            Continue with {selectedBuddy.name}{" "}
-                            <ArrowRight className="w-4 h-4 ml-2" />
+                            {isLoading ? (
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Creating {selectedBuddy.name}...
+                              </div>
+                            ) : (
+                              <>
+                                Continue with {selectedBuddy.name} <ArrowRight className="w-4 h-4 ml-2" />
+                              </>
+                            )}
                           </Button>
                         </div>
                       )}
@@ -472,7 +654,7 @@ export default function Onboarding() {
                       </div>
 
                       <Button
-                        onClick={simulateENSMinting}
+                        onClick={registerENSSubdomain}
                         size="lg"
                         className="w-full"
                         disabled={!ensName.trim() || isLoading}
@@ -489,6 +671,15 @@ export default function Onboarding() {
                           </>
                         )}
                       </Button>
+
+                      {ensAvailable === false && (
+                        <Alert variant="destructive" className="mt-4">
+                          <AlertTriangle className="w-5 h-5 mr-2" />
+                          <AlertDescription className="text-sm">
+                            This ENS name is already taken. Please choose another name.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -544,7 +735,7 @@ export default function Onboarding() {
                       </div>
 
                       <Button
-                        onClick={simulateWelcomeNFT}
+                        onClick={mintGenesisNFTs}
                         size="lg"
                         className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                         disabled={isLoading}

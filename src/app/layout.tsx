@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import AgentHover from "@/components/AgentHover";
 import GlobalGrid from "@/components/GlobalGrid";
-
+import NextAuthSessionProvider from "@/components/providers/SessionProvider";
 const exo2 = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-exo2",
@@ -24,6 +24,7 @@ export default function RootLayout({
     <html lang="en" style={{ scrollBehavior: "smooth" }} suppressHydrationWarning>
       <body className={`${exo2.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
+          <NextAuthSessionProvider>
           <GlobalGrid enabled={true} adaptiveGlow={true} />
           {children}
           <Toaster />
@@ -36,6 +37,7 @@ export default function RootLayout({
             size={130}
             offset={{ right: -14, bottom: 0 }}
           />
+          </NextAuthSessionProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -178,7 +178,7 @@ export default function LoginForm() {
           
           // Force session refresh and redirect
           await getSession();
-          router.push("/");
+          router.push("/onboarding");
         } else {
           throw new Error("Unknown sign-in error");
         }
