@@ -80,6 +80,7 @@ export default function EthEdHero() {
               className="group bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-900 hover:from-cyan-400 hover:to-blue-500 hover:text-white relative overflow-hidden rounded-full px-6 shadow-lg transition-all duration-300"
               onClick={() => window.location.href = '/login'}
             >
+            
               <Link href="/onboarding">
                 <span className="relative z-10 flex items-center">
                   Start Learning
