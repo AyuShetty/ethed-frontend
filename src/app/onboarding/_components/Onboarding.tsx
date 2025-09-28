@@ -295,7 +295,7 @@ export default function Onboarding() {
       setIsLoading(true);
 
       // Check if user already has an ENS name and update it
-      const response = await fetch("/api/user/ens", {
+      const response = await fetch("/api/ens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
