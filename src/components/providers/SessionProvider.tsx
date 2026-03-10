@@ -5,7 +5,7 @@ import { ReactNode, useEffect } from "react";
 import { toast } from "sonner";
 import { AMOY_CHAIN_ID, getChainConfig } from "@/lib/contracts";
 import { getBlockchainErrorInfo } from "@/lib/blockchain-errors";
-import { ensureAmoyChain, getWalletChainId } from "@/lib/wallet-client";
+import { ensurePolygonChain, getWalletChainId } from "@/lib/wallet-client";
 import BlockchainErrorBoundary from "@/components/BlockchainErrorBoundary";
 
 interface Props {
@@ -40,7 +40,7 @@ export function ChainSwitcher({ children }: Props) {
 
         for (let attempt = 1; attempt <= SWITCH_MAX_ATTEMPTS; attempt++) {
           try {
-            await ensureAmoyChain();
+            await ensurePolygonChain();
 
             if (!mounted) return;
 
@@ -85,13 +85,14 @@ export function ChainSwitcher({ children }: Props) {
       const nextChainId = parseInt(chainIdHex, 16);
       if (nextChainId !== AMOY_CHAIN_ID) {
         const config = getChainConfig(AMOY_CHAIN_ID);
-        toast.warning("Wrong network", {
-          description: `Switch to ${config.name} to continue.`,
+        toast.warning("Wrong network detected", {
+          description: `Please switch to ${config.name} mainnet (Chain ID: ${AMOY_CHAIN_ID}) to continue using the platform.`,
+          duration: 8000,
         });
       } else {
         const config = getChainConfig(AMOY_CHAIN_ID);
-        toast.success("Network updated", {
-          description: `Connected to ${config.name}.`,
+        toast.success("Network connected", {
+          description: `You're now on ${config.name}. Everything is ready.`,
         });
       }
     };
@@ -100,8 +101,9 @@ export function ChainSwitcher({ children }: Props) {
       const chainId = await getWalletChainId();
       if (chainId && chainId !== AMOY_CHAIN_ID) {
         const config = getChainConfig(AMOY_CHAIN_ID);
-        toast.warning("Wrong network", {
-          description: `Switch to ${config.name} to continue.`,
+        toast.warning("Wrong network detected", {
+          description: `Your wallet is on a different network. Please switch to ${config.name} mainnet.`,
+          duration: 8000,
         });
       }
     };

@@ -264,7 +264,7 @@ function buildCourseCompletionSVG(params: CertificateParams): string {
   <!-- Footer: chain label -->
   <text x="400" y="440"
         font-family="'SF Pro Display','Inter','Helvetica Neue',sans-serif"
-        font-size="10" fill="${textMuted}" text-anchor="middle">Polygon Amoy · On-Chain</text>
+        font-size="10" fill="${textMuted}" text-anchor="middle">Polygon Mainnet · On-Chain</text>
 
   <!-- Footer: serial -->
   <text x="744" y="440"
@@ -412,7 +412,7 @@ function buildPioneerSVG(params: CertificateParams): string {
   <!-- Footer: chain -->
   <text x="400" y="440"
         font-family="'SF Pro Display','Inter','Helvetica Neue',sans-serif"
-        font-size="10" fill="${textSecondary}" text-anchor="middle">Polygon Amoy · On-Chain</text>
+        font-size="10" fill="${textSecondary}" text-anchor="middle">Polygon Mainnet · On-Chain</text>
 
   <!-- Footer: serial -->
   <text x="744" y="440"

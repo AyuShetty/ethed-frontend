@@ -22,14 +22,14 @@ import {
   isOnChainEnabled,
 } from "@/lib/viem-client";
 import { encodeFunctionData } from "viem";
-import { polygonAmoy } from "viem/chains";
+import { polygon } from "viem/chains";
 import { logger } from "@/lib/monitoring";
 import fs from "fs";
 import path from "path";
 
 // Log on-chain mode at module load
 if (typeof globalThis !== 'undefined' && typeof process !== 'undefined') {
-  const mode = isOnChainEnabled() ? 'REAL (Polygon Amoy)' : 'MOCK (dev fallback)';
+  const mode = isOnChainEnabled() ? 'REAL (Polygon mainnet)' : 'MOCK (dev fallback)';
   logger.info(`NFT Service initialized — on-chain mode: ${mode}`, "nft-service");
 }
 
@@ -245,7 +245,7 @@ export async function mintOnChain(
   // If on-chain operations are not available, fall back to mock (dev only)
   if (!isOnChainEnabled()) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("On-chain minting unavailable: AMOY_RPC_URL and DEPLOYER_PRIVATE_KEY must be set.");
+      throw new Error("On-chain minting unavailable: POLYGON_RPC_URL and DEPLOYER_PRIVATE_KEY must be set.");
     }
     logger.warn("On-chain minting disabled (missing env vars) — using dev mock", "nft-service");
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -302,7 +302,7 @@ export async function mintOnChain(
     // Sign the transaction (specify chain explicitly for type safety)
     const serialized = await walletClient.signTransaction({
       ...tx,
-      chain: polygonAmoy,
+      chain: polygon,
     });
 
     // Send the raw transaction

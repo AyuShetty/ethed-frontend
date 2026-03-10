@@ -26,8 +26,10 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      // Redirect bare /courses to /learn (the course catalog)
       { source: '/courses', destination: '/learn', permanent: true },
-      { source: '/courses/:path*', destination: '/learn/:path*', permanent: true },
+      // Note: Do NOT redirect /courses/:path* — actual course pages with lessons
+      // live under src/app/(public)/courses/ (e.g., eips-101, 0g-101).
     ];
   },
 

@@ -168,7 +168,13 @@ export default function CourseModulePage({
 
   if (selectedLesson && activeTab === 'lesson') {
     return (
-      <div className="min-h-screen bg-slate-950">
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="min-h-screen bg-slate-950"
+      >
         <div className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <button
@@ -235,7 +241,7 @@ export default function CourseModulePage({
             />
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -247,18 +253,40 @@ export default function CourseModulePage({
           <div className="flex items-start justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">{courseName}</h1>
-              <p className="text-slate-400">
+              <p className="text-muted-foreground">
                 {completedLessons.length} of {totalLessons} lessons completed
               </p>
             </div>
             {badge && <span className="text-4xl">{badge}</span>}
           </div>
-          <Progress value={progressPercentage} className="h-2" />
-          <div className="flex items-center justify-between mt-2 text-sm text-slate-400">
-            <span>{Math.round(progressPercentage)}% Complete</span>
-            <span>
-              {completedModules}/{totalModules} modules finished
-            </span>
+          <div className="relative">
+            <Progress value={progressPercentage} className="h-2.5" />
+            {/* Milestone markers */}
+            <div className="absolute top-0 left-0 w-full h-full flex items-center pointer-events-none">
+              {[25, 50, 75, 100].map(milestone => (
+                <div
+                  key={milestone}
+                  className={`absolute h-4 w-0.5 -top-0.5 transition-colors duration-300 ${
+                    progressPercentage >= milestone ? 'bg-primary' : 'bg-muted-foreground/30'
+                  }`}
+                  style={{ left: `${milestone}%` }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
+            <span className="font-medium">{Math.round(progressPercentage)}% Complete</span>
+            <div className="flex items-center gap-4">
+              {progressPercentage >= 50 && progressPercentage < 100 && (
+                <span className="text-xs text-amber-500 dark:text-amber-400 font-medium animate-pulse">🔥 Halfway there!</span>
+              )}
+              {progressPercentage === 100 && (
+                <span className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">🎉 Course complete!</span>
+              )}
+              <span>
+                {completedModules}/{totalModules} modules finished
+              </span>
+            </div>
           </div>
         </div>
       </div>

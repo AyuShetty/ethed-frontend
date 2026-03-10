@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => {
       success: vi.fn(),
       info: vi.fn(),
     },
-    ensureAmoyChainMock: vi.fn(),
+    ensurePolygonChainMock: vi.fn(),
     getWalletChainIdMock: vi.fn(),
     siweConstructorMock: vi.fn(),
   };
@@ -40,13 +40,14 @@ vi.mock("@/lib/blockchain-errors", () => ({
 }));
 
 vi.mock("@/lib/wallet-client", () => ({
-  ensureAmoyChain: () => mocks.ensureAmoyChainMock(),
+  ensurePolygonChain: () => mocks.ensurePolygonChainMock(),
+  ensureAmoyChain: () => mocks.ensurePolygonChainMock(),
   getWalletChainId: () => mocks.getWalletChainIdMock(),
 }));
 
 vi.mock("@/lib/contracts", () => ({
-  AMOY_CHAIN_ID: 80002,
-  getChainConfig: () => ({ name: "Polygon Amoy" }),
+  AMOY_CHAIN_ID: 137,
+  getChainConfig: () => ({ name: "Polygon" }),
 }));
 
 vi.mock("siwe", () => ({
@@ -90,7 +91,7 @@ describe("SiweLoginButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign in with ethereum/i }));
 
     await waitFor(() => {
-      expect(mocks.toast.error).toHaveBeenCalledWith("Wallet not found", expect.any(Object));
+      expect(mocks.toast.error).toHaveBeenCalledWith("No wallet detected", expect.any(Object));
     });
     expect(mocks.signInMock).not.toHaveBeenCalled();
   });
@@ -113,12 +114,12 @@ describe("SiweLoginButton", () => {
   });
 
   it("toasts error when nonce endpoint fails", async () => {
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [VALID_TEST_ADDRESS];
-        if (method === "eth_chainId") return "0x13882"; // 80002
+        if (method === "eth_chainId") return "0x89"; // 137
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -140,12 +141,12 @@ describe("SiweLoginButton", () => {
   });
 
   it("toasts error when nonce is missing", async () => {
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [VALID_TEST_ADDRESS];
-        if (method === "eth_chainId") return "0x13882";
+        if (method === "eth_chainId") return "0x89";
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -171,12 +172,12 @@ describe("SiweLoginButton", () => {
 
   it("continues SIWE flow even if `siwe-nonce` is not visible to document.cookie (HttpOnly)", async () => {
     // ensure wallet and chain are correct
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [VALID_TEST_ADDRESS];
-        if (method === "eth_chainId") return "0x13882"; // 80002
+        if (method === "eth_chainId") return "0x89"; // 137
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -203,12 +204,12 @@ describe("SiweLoginButton", () => {
 
   it("sanitizes and accepts a mixed-case address (your wallet) from the provider", async () => {
     const rawAddress = "  0x2A505a987cB41A2e2c235D851e3d74Fa24206229  ";
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [rawAddress];
-        if (method === "eth_chainId") return "0x13882";
+        if (method === "eth_chainId") return "0x89";
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -235,12 +236,12 @@ describe("SiweLoginButton", () => {
 
   it("sanitizes zero-width characters in provider address and proceeds", async () => {
     const rawAddress = "\u200B0x2A505a987cB41A2e2c235D851e3d74Fa24206229"; // zero-width prefix
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [rawAddress];
-        if (method === "eth_chainId") return "0x13882";
+        if (method === "eth_chainId") return "0x89";
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -281,12 +282,12 @@ describe("SiweLoginButton", () => {
   });
 
   it("toasts error when signIn returns not ok", async () => {
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [VALID_TEST_ADDRESS];
-        if (method === "eth_chainId") return "0x13882";
+        if (method === "eth_chainId") return "0x89";
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -315,12 +316,12 @@ describe("SiweLoginButton", () => {
   });
 
   it("surfaces normalized blockchain error when signIn returns an error string", async () => {
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [VALID_TEST_ADDRESS];
-        if (method === "eth_chainId") return "0x13882";
+        if (method === "eth_chainId") return "0x89";
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),
@@ -371,19 +372,19 @@ describe("SiweLoginButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign in with ethereum/i }));
 
     await waitFor(() => {
-      expect(mocks.ensureAmoyChainMock).toHaveBeenCalled();
+      expect(mocks.ensurePolygonChainMock).toHaveBeenCalled();
       expect(mocks.toast.success).toHaveBeenCalledWith("Network updated", expect.any(Object));
     });
   });
 
   it("sanitizes and normalizes addresses with invisible characters", async () => {
     const addressWithInvisibleChars = `\u200B${VALID_TEST_ADDRESS}\uFEFF`;
-    mocks.getWalletChainIdMock.mockResolvedValueOnce(80002);
+    mocks.getWalletChainIdMock.mockResolvedValueOnce(137);
 
     setEthereum({
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [addressWithInvisibleChars];
-        if (method === "eth_chainId") return "0x13882";
+        if (method === "eth_chainId") return "0x89";
         if (method === "personal_sign") return "0xsig";
         throw new Error(`unexpected method: ${method}`);
       }),

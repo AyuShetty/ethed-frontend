@@ -290,16 +290,41 @@ export default function EnhancedLessonViewer({
                 return data;
             }),
             {
-                loading: 'Finalizing course & minting your NFT...',
+                loading: 'Finalizing course & minting your NFT…',
                 success: (data) => {
-                    setTimeout(() => router.push('/dashboard'), 2000);
+                    setTimeout(() => router.push('/dashboard'), 3000);
+
                     if (data.alreadyMinted) {
-                      return 'Achievement updated! Redirecting...';
+                      return 'Achievement already recorded! Redirecting to dashboard…';
                     }
-                    if (!data.transaction || !data.transaction.txHash) {
-                      return 'Course Complete! Certificate recorded (off-chain).';
+
+                    const isOnChain = data.transaction?.txHash && !/^0x0+$/.test(data.transaction.txHash);
+
+                    if (isOnChain) {
+                      // Show detailed on-chain feedback
+                      const txHash = data.transaction.txHash;
+                      const shortTx = `${txHash.slice(0, 10)}…${txHash.slice(-6)}`;
+                      const walletAddr = session?.address
+                        ? `${session.address.slice(0, 6)}…${session.address.slice(-4)}`
+                        : '';
+                      const tokenId = data.transaction.tokenId || data.nft?.tokenId;
+
+                      // Open explorer link in a separate toast
+                      setTimeout(() => {
+                        toast.info('View your NFT on-chain', {
+                          description: `Transaction: ${shortTx}${walletAddr ? ` • Wallet: ${walletAddr}` : ''}${tokenId ? ` • Token #${tokenId}` : ''}`,
+                          duration: 15000,
+                          action: {
+                            label: 'Open Explorer',
+                            onClick: () => window.open(`https://polygonscan.com/tx/${txHash}`, '_blank'),
+                          },
+                        });
+                      }, 500);
+
+                      return `🎓 Course Complete! NFT minted on Polygon!`;
                     }
-                    return 'Course Complete! Your NFT is being minted! 🎓';
+
+                    return '🎓 Course Complete! Certificate recorded off-chain. Connect a wallet to mint on-chain.';
                 },
                 error: (err) => {
                     setIsFinishing(false);

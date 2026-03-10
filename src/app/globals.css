@@ -220,10 +220,48 @@ h1, h2, h3 {
 :root:not(.dark) .via-slate-900 { --tw-gradient-via: var(--card) !important; }
 :root:not(.dark) .via-slate-800 { --tw-gradient-via: var(--muted) !important; }
 
+/* ── Slate-700 backgrounds (inputs, skeletons, loading states) ── */
+:root:not(.dark) .bg-slate-700 { background-color: var(--border) !important; }
+:root:not(.dark) .bg-slate-700\/50 { background-color: color-mix(in srgb, var(--muted) 70%, transparent) !important; }
+:root:not(.dark) .bg-slate-700\/30 { background-color: color-mix(in srgb, var(--muted) 50%, transparent) !important; }
+
+/* ── Gray backgrounds (OAuth buttons, mixed UI) ── */
+:root:not(.dark) .bg-gray-900 { background-color: var(--foreground) !important; }
+:root:not(.dark) .bg-gray-800 { background-color: color-mix(in srgb, var(--foreground) 85%, var(--background)) !important; }
+:root:not(.dark) .bg-gray-50 { background-color: var(--muted) !important; }
+
+/* ── Gray text ── */
+:root:not(.dark) .text-gray-900 { color: var(--foreground) !important; }
+:root:not(.dark) .text-gray-400 { color: var(--muted-foreground) !important; }
+:root:not(.dark) .text-gray-300 { color: color-mix(in srgb, var(--foreground) 70%, var(--muted-foreground)) !important; }
+
+/* ── Gray borders ── */
+:root:not(.dark) .border-gray-300 { border-color: var(--border) !important; }
+:root:not(.dark) .border-gray-700 { border-color: var(--border) !important; }
+
+/* ── Cyan text in light mode — ensure accessible contrast ── */
+:root:not(.dark) .text-cyan-200 { color: #0e7490 !important; }
+:root:not(.dark) .text-cyan-100 { color: #155e75 !important; }
+:root:not(.dark) .text-cyan-400 { color: #0891b2 !important; }
+
+/* ── Emerald / teal text in light mode — ensure accessible contrast ── */
+:root:not(.dark) .text-emerald-200 { color: #047857 !important; }
+:root:not(.dark) .text-emerald-400 { color: #059669 !important; }
+:root:not(.dark) .text-teal-200 { color: #0d9488 !important; }
+
+/* ── Blue-900 based gradient backgrounds (how-it-works, cards) ── */
+:root:not(.dark) .from-blue-900\/20 { --tw-gradient-from: color-mix(in srgb, var(--primary) 8%, transparent) !important; }
+:root:not(.dark) .via-teal-800\/10 { --tw-gradient-via: color-mix(in srgb, var(--secondary) 6%, transparent) !important; }
+:root:not(.dark) .to-emerald-900\/10 { --tw-gradient-to: color-mix(in srgb, #059669 6%, transparent) !important; }
+
 /* ── Hover states ── */
 :root:not(.dark) .hover\:bg-white\/5:hover { background-color: color-mix(in srgb, var(--muted) 50%, transparent) !important; }
 :root:not(.dark) .hover\:bg-white\/10:hover { background-color: color-mix(in srgb, var(--muted) 70%, transparent) !important; }
 :root:not(.dark) .hover\:text-white:hover { color: var(--foreground) !important; }
+:root:not(.dark) .hover\:bg-gray-50:hover { background-color: var(--muted) !important; }
+:root:not(.dark) .hover\:bg-gray-900:hover { background-color: color-mix(in srgb, var(--foreground) 90%, var(--background)) !important; }
+:root:not(.dark) .hover\:bg-slate-700:hover { background-color: color-mix(in srgb, var(--muted) 90%, var(--border)) !important; }
+:root:not(.dark) .hover\:bg-emerald-400\/10:hover { background-color: color-mix(in srgb, #059669 10%, transparent) !important; }
 
 /* ── Divide colors ── */
 :root:not(.dark) .divide-white\/10 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
@@ -234,10 +272,69 @@ h1, h2, h3 {
 
 /* ── Placeholder text ── */
 :root:not(.dark) .placeholder\:text-slate-500::placeholder { color: var(--muted-foreground) !important; }
+:root:not(.dark) .placeholder\:text-slate-400::placeholder { color: var(--muted-foreground) !important; }
+
+/* ── Cyan border opacity variants for light mode ── */
+:root:not(.dark) .border-cyan-400\/20 { border-color: color-mix(in srgb, #0891b2 25%, var(--border)) !important; }
+:root:not(.dark) .border-cyan-400\/40 { border-color: color-mix(in srgb, #0891b2 45%, var(--border)) !important; }
+:root:not(.dark) .border-cyan-300\/20 { border-color: color-mix(in srgb, #0891b2 20%, var(--border)) !important; }
+:root:not(.dark) .border-emerald-300\/30 { border-color: color-mix(in srgb, #059669 30%, var(--border)) !important; }
+:root:not(.dark) .border-teal-300\/30 { border-color: color-mix(in srgb, #0d9488 30%, var(--border)) !important; }
+
+/* ── Cyan / emerald bg opacity variants for light mode ── */
+:root:not(.dark) .bg-cyan-500\/10 { background-color: color-mix(in srgb, #0891b2 10%, var(--card)) !important; }
+:root:not(.dark) .bg-cyan-500\/5 { background-color: color-mix(in srgb, #0891b2 5%, var(--card)) !important; }
+:root:not(.dark) .bg-cyan-400\/20 { background-color: color-mix(in srgb, #0891b2 15%, var(--card)) !important; }
+:root:not(.dark) .bg-emerald-400\/10 { background-color: color-mix(in srgb, #059669 10%, var(--card)) !important; }
+:root:not(.dark) .bg-teal-400\/10 { background-color: color-mix(in srgb, #0d9488 10%, var(--card)) !important; }
+
+/* ── Shadow adjustments for light mode (reduce glow, use soft shadows) ── */
+:root:not(.dark) .shadow-cyan-glow { box-shadow: 0 10px 40px rgba(8, 145, 178, 0.08) !important; }
+:root:not(.dark) .shadow-emerald-glow { box-shadow: 0 10px 40px rgba(5, 150, 105, 0.08) !important; }
+:root:not(.dark) .shadow-cyan-500\/20 { --tw-shadow-color: rgba(8, 145, 178, 0.1) !important; }
+
+/* ── Light mode card elevation and polish ── */
+:root:not(.dark) [data-slot="card"] {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
+}
+:root:not(.dark) [data-slot="card"]:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04) !important;
+}
 
 /* ── Ensure the global grid is less visible in light mode ── */
 :root:not(.dark) canvas[class*="fixed"] {
-  opacity: 0.4 !important;
+  opacity: 0.25 !important;
+}
+
+/* ── Light mode gradient text adjustments for readability ── */
+:root:not(.dark) .from-cyan-300\/90 { --tw-gradient-from: #0891b2 !important; }
+:root:not(.dark) .via-slate-100\/85 { --tw-gradient-via: #334155 !important; }
+:root:not(.dark) .to-teal-200\/90 { --tw-gradient-to: #0d9488 !important; }
+
+/* ── Backdrop blur for light mode (softer) ── */
+:root:not(.dark) .backdrop-blur-md { backdrop-filter: blur(8px) !important; }
+:root:not(.dark) .backdrop-blur-xl { backdrop-filter: blur(16px) !important; }
+:root:not(.dark) .backdrop-blur-sm { backdrop-filter: blur(4px) !important; }
+
+/* ── Global UX polish: transitions and interactivity ── */
+[data-slot="button"] {
+  transition: all 0.2s ease-out;
+}
+[data-slot="button"]:active:not(:disabled) {
+  transform: scale(0.98);
+}
+[data-slot="card"] {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* ── Focus-visible accessibility ring for interactive elements ── */
+:root:not(.dark) [data-slot="button"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.3);
+}
+
+/* ── Light mode: soften animated gradient orbs in hero ── */
+:root:not(.dark) .animate-pulse {
+  animation-duration: 4s;
 }
 
 @layer base {

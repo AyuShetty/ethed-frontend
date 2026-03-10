@@ -126,15 +126,59 @@ export default function NFTShareModal({ nft, open, onClose }: NFTShareModalProps
                   ) : nft.tokenId ? (
                     <Badge variant="outline" className="text-xs">Token #{nft.tokenId}</Badge>
                   ) : null}
-                  {isRealTx && (
+                  {isRealTx ? (
                     <Badge variant="outline" className="text-xs bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
                       On-Chain ✓
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs bg-slate-500/10 border-slate-500/30 text-slate-600 dark:text-slate-400">
+                      Off-Chain
                     </Badge>
                   )}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* On-chain transaction details */}
+          {isRealTx && (
+            <div className="rounded-lg bg-muted/20 border border-border/40 p-3 space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Confirmed on-chain
+                </span>
+              </div>
+              {nft.transactionHash && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Transaction</span>
+                  <span className="font-mono text-foreground">
+                    {nft.transactionHash.slice(0, 10)}…{nft.transactionHash.slice(-6)}
+                  </span>
+                </div>
+              )}
+              {nft.contractAddress && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Contract</span>
+                  <span className="font-mono text-foreground">
+                    {nft.contractAddress.slice(0, 10)}…{nft.contractAddress.slice(-4)}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Network</span>
+                <span className="text-foreground">Polygon</span>
+              </div>
+            </div>
+          )}
+
+          {!isRealTx && !isMockToken && (
+            <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 text-xs text-amber-700 dark:text-amber-300">
+              <p className="font-medium mb-1">Not yet minted on-chain</p>
+              <p className="text-amber-600/80 dark:text-amber-400/80">This NFT was recorded off-chain. Connect a wallet and claim it again to mint it on Polygon mainnet.</p>
+            </div>
+          )}
 
           {/* Share Actions */}
           <div className="space-y-2">
@@ -157,18 +201,10 @@ export default function NFTShareModal({ nft, open, onClose }: NFTShareModalProps
               <Button variant="outline" className="w-full justify-start" asChild>
                 <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  View on Explorer
+                  View Transaction on Polygonscan
                 </a>
               </Button>
-            ) : (
-              // if there's no valid tx hash or chain info, show a hint so users
-              // aren’t left wondering where the verify link went
-              <div className="text-xs text-center text-muted-foreground">
-                {isRealTx
-                  ? 'No chain info available yet.'
-                  : 'NFT has not been minted on-chain or transaction data is missing.'}
-              </div>
-            )}
+            ) : null}
 
             {ipfsUrl && (
               <Button variant="outline" className="w-full justify-start" asChild>

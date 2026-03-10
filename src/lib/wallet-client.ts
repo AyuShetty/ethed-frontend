@@ -45,7 +45,7 @@ export async function switchToChain(targetChainId: number): Promise<void> {
   }
 }
 
-export async function ensureAmoyChain(): Promise<number | null> {
+export async function ensurePolygonChain(): Promise<number | null> {
   const currentChainId = await getWalletChainId();
 
   if (currentChainId === null) {
@@ -58,3 +58,5 @@ export async function ensureAmoyChain(): Promise<number | null> {
 
   return AMOY_CHAIN_ID;
 }
+
+export const ensureAmoyChain = ensurePolygonChain;

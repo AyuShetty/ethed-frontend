@@ -111,7 +111,7 @@ export default function ProfilePortfolio({ handle }: Props) {
               asChild
               className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white"
             >
-              <a href="/courses">Browse Courses</a>
+              <a href="/learn">Browse Courses</a>
             </Button>
           </CardContent>
         </Card>
@@ -362,7 +362,7 @@ export default function ProfilePortfolio({ handle }: Props) {
                             asChild
                           >
                             <a
-                              href={nft.explorerUrl || `https://amoy.polygonscan.com/tx/${nft.transactionHash}`}
+                              href={nft.explorerUrl || `https://polygonscan.com/tx/${nft.transactionHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -444,7 +444,7 @@ export default function ProfilePortfolio({ handle }: Props) {
                     <BookOpen className="w-10 h-10 text-slate-500 mx-auto mb-3" />
                     <p className="text-slate-400">No courses enrolled yet.</p>
                     <Button asChild variant="outline" size="sm" className="mt-4 border-cyan-400/20 text-cyan-400 hover:bg-cyan-400/5">
-                      <a href="/courses">Browse Courses</a>
+                      <a href="/learn">Browse Courses</a>
                     </Button>
                   </CardContent>
                 </Card>

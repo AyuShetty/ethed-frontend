@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { isAddress, getAddress } from "viem";
 import { AMOY_CHAIN_ID, getChainConfig } from "@/lib/contracts";
 import { getBlockchainErrorInfo } from "@/lib/blockchain-errors";
-import { ensureAmoyChain, getWalletChainId } from "@/lib/wallet-client";
+import { ensurePolygonChain, getWalletChainId } from "@/lib/wallet-client";
 import { logger } from "@/lib/monitoring";
 
 /**
@@ -38,6 +38,7 @@ function metamaskDeepLink(): string {
 
 export function SiweLoginButton() {
   const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const isMobile = useMemo(() => isMobileBrowser(), []);
   const hasInjectedWallet = typeof window !== "undefined" && !!window.ethereum;
 
@@ -45,20 +46,21 @@ export function SiweLoginButton() {
     try {
       setIsLoading(true);
 
-      // Check if wallet is available
+      // Step 1: Check wallet availability
+      setStatusMessage("Detecting wallet…");
       if (!window.ethereum) {
         if (isMobile) {
-          // Deep-link into MetaMask's in-app browser
           window.location.href = metamaskDeepLink();
           return;
         }
-        toast.error("Wallet not found", {
-          description: "Please install a Web3 wallet like MetaMask.",
+        toast.error("No wallet detected", {
+          description: "Please install a Web3 wallet like MetaMask to sign in with Ethereum.",
         });
         return;
       }
 
-      // Request accounts
+      // Step 2: Request accounts
+      setStatusMessage("Requesting wallet access…");
       const accounts = (await window.ethereum.request({
         method: "eth_requestAccounts",
       })) as string[];
@@ -72,14 +74,12 @@ export function SiweLoginButton() {
 
       const rawAddr = sanitizeAddress(String(accounts[0]));
 
-      // Defensive normalization: extract the hex part and ensure valid 0x prefix.
-      // This handles cases like "eip155:1:0x...", " 0x...", or addresses with invisible chars.
+      // Defensive normalization
       let addr = rawAddr.trim();
       if (addr.includes(":")) {
         addr = addr.split(":").pop() || addr;
       }
       
-      // Strip everything except hex characters
       const hexOnly = addr.replace(/^0x/i, "").replace(/[^a-fA-F0-9]/g, "");
       const normalizedAddress = `0x${hexOnly}`;
 
@@ -93,43 +93,56 @@ export function SiweLoginButton() {
 
       const address = getAddress(normalizedAddress);
 
+      // Step 3: Ensure correct network
+      setStatusMessage("Checking network…");
       const currentChainId = await getWalletChainId();
       if (currentChainId !== AMOY_CHAIN_ID) {
-        await ensureAmoyChain();
-        const chain = getChainConfig(AMOY_CHAIN_ID);
-        toast.success("Network updated", {
-          description: `Connected to ${chain.name}.`,
-        });
+        setStatusMessage("Switching to Polygon…");
+        try {
+          await ensurePolygonChain();
+          const chain = getChainConfig(AMOY_CHAIN_ID);
+          toast.success("Network updated", {
+            description: `Connected to ${chain.name}.`,
+          });
+        } catch (switchError) {
+          const info = getBlockchainErrorInfo(switchError);
+          if (info.code === 4001) {
+            toast.error("Network switch required", {
+              description: "You need to switch to Polygon mainnet to sign in. Please approve the network switch and try again.",
+            });
+          } else {
+            toast.error(info.title, {
+              description: info.description || "Failed to switch to Polygon. Please switch manually in your wallet settings (Chain ID: 137).",
+            });
+          }
+          return;
+        }
       }
 
-      // Get nonce from backend
+      // Step 4: Get nonce
+      setStatusMessage("Preparing sign-in challenge…");
       const nonceResponse = await fetch("/api/auth/siwe/nonce");
       if (!nonceResponse.ok) {
         toast.error("Failed to start sign-in", {
-          description: "Could not fetch a login nonce. Please try again.",
+          description: "Could not fetch a login challenge. Please check your connection and try again.",
         });
         return;
       }
       const { nonce } = await nonceResponse.json();
       if (!nonce) {
         toast.error("Failed to start sign-in", {
-          description: "Login nonce was missing. Please try again.",
+          description: "Login challenge was missing. Please refresh the page and try again.",
         });
         return;
       }
 
-      // NOTE: server sets `siwe-nonce` as an HttpOnly cookie — it will not be visible to `document.cookie`.
-      // Do not block the SIWE flow based on a client-side cookie check (it was causing false negatives).
       try {
         const hasCookie = typeof document !== 'undefined' && document.cookie.includes('siwe-nonce=');
         if (!hasCookie) {
-          // Non-blocking diagnostic for developers; proceed regardless because the server will
-          // verify the nonce from the HttpOnly cookie set by `/api/auth/siwe/nonce`.
-          // (Avoid showing a toast here to prevent confusing end users.)
           logger.warn('`siwe-nonce` not visible to document.cookie (expected for HttpOnly). Proceeding.', 'SiweLoginButton');
         }
       } catch {
-        // Ignore cookie-check errors in restrictive environments
+        // Ignore cookie-check errors
       }
 
       // Re-check chain ID after potential switch
@@ -142,7 +155,8 @@ export function SiweLoginButton() {
         throw new Error("Invalid chain ID received from wallet.");
       }
 
-      // Create SIWE message
+      // Step 5: Create and sign SIWE message
+      setStatusMessage("Please sign the message in your wallet…");
       const message = new SiweMessage({
         domain: window.location.host,
         address: address,
@@ -155,13 +169,28 @@ export function SiweLoginButton() {
 
       const messageToSign = message.prepareMessage();
 
-      // Sign the message
-      const signature = await window.ethereum.request({
-        method: "personal_sign",
-        params: [messageToSign, address],
-      });
+      let signature: string;
+      try {
+        signature = await window.ethereum.request({
+          method: "personal_sign",
+          params: [messageToSign, address],
+        }) as string;
+      } catch (signError) {
+        const info = getBlockchainErrorInfo(signError);
+        if (info.code === 4001) {
+          toast.error("Signature declined", {
+            description: "You cancelled the signature request. Please try again and approve the message in your wallet.",
+          });
+        } else {
+          toast.error(info.title, {
+            description: info.description || "Failed to sign the login message. Please try again.",
+          });
+        }
+        return;
+      }
 
-      // Sign in with the signature (do not redirect so we can show server error messages)
+      // Step 6: Verify with server
+      setStatusMessage("Verifying signature…");
       const result = await signIn("siwe", {
         message: messageToSign,
         signature: signature,
@@ -170,53 +199,73 @@ export function SiweLoginButton() {
       });
 
       if (!result?.ok) {
-        // NextAuth returns an `error` (string or object) when authorize() fails — prefer a
-        // normalized blockchain-friendly message when possible, otherwise fall back to a
-        // generic "Sign in failed" toast to avoid leaking raw objects to the UI.
-        const rawErr = (result as any)?.error;
+        const rawErr = (result as unknown as Record<string, unknown>)?.error;
         if (rawErr) {
-          const info = getBlockchainErrorInfo(rawErr);
-          toast.error(info.title, { description: info.description || (typeof rawErr === 'string' ? rawErr : JSON.stringify(rawErr)) });
+          const errStr = typeof rawErr === 'string' ? rawErr : '';
+          if (errStr.toLowerCase().includes('wrong network') || errStr.toLowerCase().includes('chain')) {
+            toast.error("Wrong network detected", {
+              description: "Please switch your wallet to Polygon mainnet (Chain ID: 137) and try again.",
+            });
+          } else if (errStr.toLowerCase().includes('nonce') || errStr.toLowerCase().includes('expired')) {
+            toast.error("Session expired", {
+              description: "Your sign-in session has expired. Please try again — a fresh challenge will be generated.",
+            });
+          } else {
+            const info = getBlockchainErrorInfo(rawErr);
+            toast.error(info.title, { description: info.description || (typeof rawErr === 'string' ? rawErr : JSON.stringify(rawErr)) });
+          }
         } else {
-          toast.error("Sign in failed", { description: "Sign in failed. Please try again." });
+          toast.error("Sign in failed", { description: "Could not complete sign-in. Please try again." });
         }
         return;
       }
 
-      // Redirect on success
+      // Step 7: Success
+      setStatusMessage("Sign-in successful! Redirecting…");
+      toast.success("Welcome!", {
+        description: "You have been signed in successfully.",
+      });
       if (result.url) {
         window.location.href = result.url;
       }
     } catch (error) {
       const info = getBlockchainErrorInfo(error);
       toast.error(info.title, {
-        description: info.description || "Failed to sign in with Ethereum.",
+        description: info.description || "Failed to sign in with Ethereum. Please try again.",
       });
     } finally {
       setIsLoading(false);
+      setStatusMessage(null);
     }
   };
 
   return (
-    <Button
-      onClick={handleSiweSignIn}
-      disabled={isLoading}
-      variant="outline"
-      className="w-full"
-      size="lg"
-    >
-      {isLoading ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : isMobile && !hasInjectedWallet ? (
-        <Smartphone className="mr-2 h-4 w-4" />
-      ) : (
-        <Wallet className="mr-2 h-4 w-4" />
+    <div className="space-y-2">
+      <Button
+        onClick={handleSiweSignIn}
+        disabled={isLoading}
+        variant="outline"
+        className="w-full"
+        size="lg"
+      >
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : isMobile && !hasInjectedWallet ? (
+          <Smartphone className="mr-2 h-4 w-4" />
+        ) : (
+          <Wallet className="mr-2 h-4 w-4" />
+        )}
+        {isLoading
+          ? (statusMessage || "Connecting...")
+          : isMobile && !hasInjectedWallet
+            ? "Open in MetaMask"
+            : "Sign in with Ethereum"}
+      </Button>
+      {isLoading && statusMessage && (
+        <p className="text-xs text-center text-muted-foreground animate-pulse">
+          {statusMessage}
+        </p>
       )}
-      {isLoading
-        ? "Connecting..."
-        : isMobile && !hasInjectedWallet
-          ? "Open in MetaMask"
-          : "Sign in with Ethereum"}
-    </Button>
+    </div>
   );
 }

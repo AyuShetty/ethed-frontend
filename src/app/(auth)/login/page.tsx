@@ -94,15 +94,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-800/40 backdrop-blur-xl border border-white/10">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-card/80 backdrop-blur-xl border border-border shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
             Welcome to eth.ed
           </CardTitle>
-          <CardDescription className="text-slate-300">
+          <CardDescription className="text-muted-foreground">
             Sign in to start your Web3 learning journey
           </CardDescription>
+
+          {/* Polygon network notice */}
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            <span>Wallet sign-in requires <strong>Polygon mainnet</strong>. We&apos;ll prompt you to switch automatically.</span>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col h-full">
           <div className="space-y-3 flex-1">
@@ -112,10 +120,10 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-600" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800/40 text-slate-400">Or continue with</span>
+                <span className="px-2 bg-card/80 text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
@@ -164,26 +172,26 @@ export default function LoginPage() {
             {/* Email/name fallback form */}
             <form onSubmit={handleEmailLogin} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">Email</Label>
+                <Label htmlFor="email" className="text-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                  className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-white">Name</Label>
+                <Label htmlFor="name" className="text-foreground">Name</Label>
                 <Input
                   id="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your Name"
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                  className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   required
                 />
               </div>
@@ -204,10 +212,10 @@ export default function LoginPage() {
             </form>
 
             {/* Admin Login Link */}
-            <div className="mt-6 pt-4 border-t border-slate-600 text-center">
+            <div className="mt-6 pt-4 border-t border-border text-center">
               <button
                 onClick={() => setAdminDialogOpen(true)}
-                className="text-sm text-slate-400 hover:text-slate-300 transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Are you the admin? Sign in here
               </button>
@@ -218,33 +226,33 @@ export default function LoginPage() {
 
       {/* Admin Login Dialog */}
       <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
-        <DialogContent className="bg-slate-800 border border-slate-700">
+        <DialogContent className="bg-card border border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Admin Access</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-foreground">Admin Access</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Enter your admin credentials to access the admin dashboard.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-email" className="text-white">Email</Label>
+              <Label htmlFor="admin-email" className="text-foreground">Email</Label>
               <Input
                 id="admin-email"
                 type="email"
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admin-password" className="text-white">Password</Label>
+              <Label htmlFor="admin-password" className="text-foreground">Password</Label>
               <Input
                 id="admin-password"
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                 required
               />
             </div>

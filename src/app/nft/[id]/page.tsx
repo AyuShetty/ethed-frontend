@@ -127,10 +127,38 @@ export default async function NFTPublicPage({ params }: NFTPageProps) {
                   {chainId && (
                     <div className="flex justify-between p-3 rounded-lg bg-muted/20">
                       <span className="text-muted-foreground">Network</span>
-                      <span className="text-foreground font-medium">Polygon Amoy</span>
+                      <span className="text-foreground font-medium">Polygon</span>
+                    </div>
+                  )}
+                  {txHash && !/^0x0+$/.test(txHash) && (
+                    <div className="flex justify-between p-3 rounded-lg bg-muted/20">
+                      <span className="text-muted-foreground">Transaction</span>
+                      <span className="text-foreground font-mono text-xs">
+                        {txHash.slice(0, 10)}…{txHash.slice(-6)}
+                      </span>
+                    </div>
+                  )}
+                  {(nft as unknown as { ownerAddress?: string | null }).ownerAddress && (
+                    <div className="flex justify-between p-3 rounded-lg bg-muted/20">
+                      <span className="text-muted-foreground">Wallet</span>
+                      <span className="text-foreground font-mono text-xs">
+                        {((nft as unknown as { ownerAddress: string }).ownerAddress).slice(0, 6)}…{((nft as unknown as { ownerAddress: string }).ownerAddress).slice(-4)}
+                      </span>
                     </div>
                   )}
                 </div>
+                {explorerUrl && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Confirmed on Polygon blockchain
+                  </div>
+                )}
+                {(!txHash || /^0x0+$/.test(txHash)) && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    Certificate recorded off-chain
+                  </div>
+                )}
               </div>
 
               {/* Explorer link */}

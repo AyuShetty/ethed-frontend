@@ -216,7 +216,7 @@ function DonateContent() {
           projectId: projectId || undefined,
           amount,
           txHash: generatedTxHash,
-          chainId: selectedChain.id === 'polygon' ? 80002 : 1,
+          chainId: selectedChain.id === 'polygon' ? 137 : 1,
           message: message || undefined,
         }),
       });

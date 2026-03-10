@@ -31,7 +31,7 @@ vi.mock("siwe", () => ({
       if (typeof input === "string") {
         // Minimal parsing for tests
         this.address = "0xabc";
-        this.chainId = 80002;
+        this.chainId = 137;
         this.nonce = "nonce-from-message";
       } else {
         this.address = input.address;
@@ -72,7 +72,7 @@ describe("SiweProvider authorize edge cases", () => {
   it("rejects when nonce cookie missing", async () => {
     const authorize = providerAuthorize();
     await expect(
-      authorize({ message: JSON.stringify({ address: "0xabc", chainId: 80002, nonce: "n" }), signature: "0x1" }, { headers: {} })
+      authorize({ message: JSON.stringify({ address: "0xabc", chainId: 137, nonce: "n" }), signature: "0x1" }, { headers: {} })
     ).rejects.toThrow(/Missing SIWE nonce cookie/);
   });
 
@@ -81,7 +81,7 @@ describe("SiweProvider authorize edge cases", () => {
     await expect(
       authorize(
         {
-          message: JSON.stringify({ address: "0xabc", chainId: 80002, nonce: "wrong" }),
+          message: JSON.stringify({ address: "0xabc", chainId: 137, nonce: "wrong" }),
           signature: "0x1",
         },
         { headers: { cookie: "siwe-nonce=expected" } }
@@ -116,7 +116,7 @@ describe("SiweProvider authorize edge cases", () => {
 
     const user = await authorize(
       {
-        message: JSON.stringify({ address: "0xabc", chainId: 80002, nonce: "expected" }),
+        message: JSON.stringify({ address: "0xabc", chainId: 137, nonce: "expected" }),
         signature: "0xsignature",
       },
       { headers: { cookie: "siwe-nonce=expected" } }
@@ -143,7 +143,7 @@ describe("SiweProvider authorize edge cases", () => {
 
     const user = await authorize(
       {
-        message: JSON.stringify({ address: testAddress, chainId: 80002, nonce: "expected" }),
+        message: JSON.stringify({ address: testAddress, chainId: 137, nonce: "expected" }),
         signature: "0xsignature",
       },
       { headers: { cookie: "siwe-nonce=expected" } }

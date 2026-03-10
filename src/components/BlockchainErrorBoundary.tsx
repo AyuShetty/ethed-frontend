@@ -40,21 +40,22 @@ export default class BlockchainErrorBoundary extends React.Component<Props, Stat
     }
 
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <Card className="bg-slate-900/90 backdrop-blur-xl border border-red-400/20 max-w-md w-full">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="bg-card/90 backdrop-blur-xl border border-destructive/20 max-w-md w-full shadow-lg">
           <CardHeader className="text-center">
-            <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
-              <AlertTriangle className="h-8 w-8 text-red-400" />
+            <div className="h-16 w-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-destructive/20">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
-            <CardTitle className="text-white text-xl">Blockchain Error</CardTitle>
+            <CardTitle className="text-foreground text-xl">Blockchain Error</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
-            <p className="text-slate-400">
+            <p className="text-muted-foreground">
               Something went wrong while interacting with the blockchain. Please try again.
             </p>
             <Button
               onClick={this.handleReset}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white"
+              className="w-full"
+              variant="default"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again

@@ -51,13 +51,14 @@ describe('nft-service', () => {
 
   it('mintOnChain returns mock result when on-chain env vars are not set', async () => {
     // Ensure on-chain envs are not present
+    delete process.env.POLYGON_RPC_URL;
     delete process.env.AMOY_RPC_URL;
     delete process.env.DEPLOYER_PRIVATE_KEY;
 
     const res = await mintOnChain('0x0000000000000000000000000000000000000001', '/metadata/1.json', 'pioneer');
 
     expect(res.tokenId).toMatch(/^mock-/);
-    expect(res.txHash).toMatch(/^0x0+/);
+    expect(res.txHash).toBe('');
     expect(res.contractAddress).toBeDefined();
   });
 });

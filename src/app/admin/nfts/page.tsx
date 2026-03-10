@@ -37,7 +37,7 @@ interface PaginatedResponse {
 const CHAIN_NAMES: Record<number, string> = {
   1: 'Ethereum',
   137: 'Polygon',
-  80002: 'Amoy',
+  80002: 'Polygon Amoy',
   11155111: 'Sepolia',
 };
 

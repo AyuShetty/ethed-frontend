@@ -59,7 +59,7 @@ export function SiweProvider() {
 
         const chainId = (siweMessage.chainId ?? AMOY_CHAIN_ID) as number;
         if (chainId !== AMOY_CHAIN_ID) {
-          throw new Error("Wrong network: please switch to Polygon Amoy");
+          throw new Error("Wrong network: please switch to Polygon mainnet");
         }
 
         const cookieHeader = (req as Record<string, unknown> & { headers?: { cookie?: string } })?.headers?.cookie as string | undefined;

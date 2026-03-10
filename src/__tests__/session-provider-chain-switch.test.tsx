@@ -16,12 +16,13 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/lib/wallet-client", () => ({
   getWalletChainId: vi.fn(),
+  ensurePolygonChain: vi.fn(),
   ensureAmoyChain: vi.fn(),
 }));
 
 import { AMOY_CHAIN_ID } from "@/lib/contracts";
 import { ChainSwitcher } from "@/components/providers/SessionProvider";
-import { ensureAmoyChain, getWalletChainId } from "@/lib/wallet-client";
+import { ensurePolygonChain, getWalletChainId } from "@/lib/wallet-client";
 import { toast } from "sonner";
 
 function flushAllTimers() {
@@ -51,7 +52,7 @@ describe("ChainSwitcher", () => {
   it("retries chain switching with backoff and succeeds", async () => {
     (getWalletChainId as any).mockResolvedValue(1);
 
-    (ensureAmoyChain as any)
+    (ensurePolygonChain as any)
       .mockRejectedValueOnce(new Error("temporary"))
       .mockRejectedValueOnce(new Error("temporary"))
       .mockResolvedValueOnce(AMOY_CHAIN_ID);
@@ -64,12 +65,12 @@ describe("ChainSwitcher", () => {
 
     await flushAllTimers();
 
-    expect(ensureAmoyChain).toHaveBeenCalledTimes(3);
+    expect(ensurePolygonChain).toHaveBeenCalledTimes(3);
     expect(toast.success).toHaveBeenCalledTimes(1);
     expect(toast.error).not.toHaveBeenCalled();
   });
 
-  it("does nothing if already on Amoy", async () => {
+  it("does nothing if already on Polygon", async () => {
     (getWalletChainId as any).mockResolvedValue(AMOY_CHAIN_ID);
 
     render(
@@ -80,7 +81,7 @@ describe("ChainSwitcher", () => {
 
     await flushAllTimers();
 
-    expect(ensureAmoyChain).not.toHaveBeenCalled();
+    expect(ensurePolygonChain).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
   });

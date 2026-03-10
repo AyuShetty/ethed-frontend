@@ -21,7 +21,7 @@ import { logger } from "./monitoring";
 
 // Log on-chain mode at module load
 if (typeof globalThis !== 'undefined' && typeof process !== 'undefined') {
-  const mode = isOnChainEnabled() ? 'REAL (Polygon Amoy)' : 'MOCK (dev fallback)';
+  const mode = isOnChainEnabled() ? 'REAL (Polygon mainnet)' : 'MOCK (dev fallback)';
   logger.info(`ENS Service initialized — on-chain mode: ${mode}`, "ens-service");
 }
 
@@ -149,7 +149,7 @@ export async function registerOnChain(
   if (!isOnChainEnabled()) {
     if (process.env.NODE_ENV === "production") {
       throw new Error(
-        "On-chain ENS registration unavailable: AMOY_RPC_URL and DEPLOYER_PRIVATE_KEY must be set."
+        "On-chain ENS registration unavailable: POLYGON_RPC_URL and DEPLOYER_PRIVATE_KEY must be set."
       );
     }
     logger.warn(
