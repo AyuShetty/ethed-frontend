@@ -12,8 +12,10 @@ if (!pinataConfig.pinataJwt) {
 }
 
 async function pinFile(file: File): Promise<string> {
-  const result = (await uploadFile(pinataConfig, file, "public")) as { IpfsHash?: string; IpfsHash: string };
-  return `ipfs://${result.IpfsHash}`;
+  const result = (await uploadFile(pinataConfig, file, "public")) as { IpfsHash?: string; cid?: string; hash?: string };
+  const cid = result.IpfsHash || result.cid || result.hash;
+  if (!cid) throw new Error("Pinata response missing CID");
+  return `ipfs://${cid}`;
 }
 
 async function pinJSON(data: Record<string, unknown>): Promise<string> {
