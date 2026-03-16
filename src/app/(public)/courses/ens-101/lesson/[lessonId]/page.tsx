@@ -19,3 +19,4 @@ export default async function ENSLessonPage({ params }: PageProps) {
     </Suspense>
   );
 }
+// trigger build
