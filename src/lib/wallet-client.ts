@@ -60,3 +60,17 @@ export async function ensurePolygonChain(): Promise<number | null> {
 }
 
 export const ensureAmoyChain = ensurePolygonChain;
+
+export function parseWalletError(e: any): string {
+  let msg = 'Failed to interact with wallet';
+  if (typeof e === 'string') msg = e;
+  else if (e?.message) msg = e.message;
+  else if (e?.data?.message) msg = e.data.message;
+
+  const lowerMsg = msg.toLowerCase();
+  if (lowerMsg.includes('verify ownership') || lowerMsg.includes('standard is not supported')) {
+    return "Wallet could not verify ownership. The network may still be syncing the newly minted token, or your active wallet account might not match the certificate owner. Please check your active account and try again in a few moments.";
+  }
+  
+  return msg;
+}

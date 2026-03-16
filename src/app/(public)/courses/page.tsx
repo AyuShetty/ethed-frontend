@@ -9,6 +9,20 @@ import { motion } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
 import { coursesWithPath, learningPaths, canAccessCourse } from '@/lib/courseData';
 
+interface DbCourseResponse {
+  id: string; // slug
+  dbId: string;
+  title: string;
+  description: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  duration: string;
+  lessons: number;
+  students: number;
+  rating: number;
+  tags: string[];
+  nftReward: string;
+}
+
 // Deterministic pseudo-random generator based on course id so server/client match.
 // Returns an object `{ students, rating }` stable across renders.
 function deterministicStats(id: string) {
@@ -22,7 +36,7 @@ function deterministicStats(id: string) {
   return { students, rating };
 }
 
-const courses = coursesWithPath.map(c => ({
+const staticCourses = coursesWithPath.map(c => ({
   id: c.id,
   title: c.title,
   description: c.description,
@@ -74,6 +88,7 @@ export default function CoursesPage() {
   const { data: session } = useSession();
   const [selectedPath, setSelectedPath] = useState<'all' | 'Fundamentals' | 'Infrastructure' | 'Development'>('all');
   const [completedCourses, setCompletedCourses] = useState<string[]>([]);
+  const [dbCourses, setDbCourses] = useState<DbCourseResponse[]>([]);
 
   // Fetch real completed course slugs for the logged-in user
   useEffect(() => {
@@ -91,8 +106,44 @@ export default function CoursesPage() {
       .catch(() => {});
   }, [session?.user?.id]);
 
-  const availableCourses = courses.filter(course => course.available);
-  const comingSoonCourses = courses.filter(course => !course.available);
+  // Fetch published DB courses so admin-created/published courses appear publicly
+  useEffect(() => {
+    fetch('/api/courses')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d?.courses)) {
+          setDbCourses(d.courses);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const staticCourseIds = new Set(staticCourses.map(c => c.id));
+  const dynamicCourses = dbCourses
+    .filter((c) => !staticCourseIds.has(c.id))
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      level: c.difficulty,
+      duration: c.duration || 'Self-paced',
+      students: c.students,
+      rating: Number(c.rating || 4.8).toFixed(1),
+      price: 'Free',
+      badge: c.nftReward || 'Course Completion NFT',
+      topics: Array.isArray(c.tags) && c.tags.length > 0 ? c.tags : ['Web3', 'Blockchain'],
+      href: `/courses/${c.id}`,
+      available: true,
+      prerequisites: [],
+      learningPath: 'Fundamentals',
+      difficultyMilestones: [],
+      modules: [],
+      nextRecommendedCourse: undefined,
+      fromDb: true,
+    }));
+
+  const availableCourses = [...staticCourses.filter(course => course.available), ...dynamicCourses];
+  const comingSoonCourses = staticCourses.filter(course => !course.available);
 
   const filteredCourses = selectedPath === 'all' 
     ? availableCourses 
@@ -189,7 +240,9 @@ export default function CoursesPage() {
           </h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredCourses.map((course) => {
-              const canAccess = canAccessCourse(course.id, completedCourses);
+              const canAccess = course.fromDb
+                ? { canAccess: true, missingPrerequisites: [] }
+                : canAccessCourse(course.id, completedCourses);
               
               return (
                 <motion.div key={course.id} variants={cardVariants}>

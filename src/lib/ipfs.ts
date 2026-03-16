@@ -5,7 +5,8 @@
  */
 export function ipfsToGatewayUrl(
   uri: string,
-  gatewayBase = process.env.PINATA_GATEWAY_URL || "https://gateway.pinata.cloud"
+  // We force ipfs.io here even if PINATA_GATEWAY_URL is present, as gateway.pinata.cloud rate limits very aggressively
+  gatewayBase = "https://ipfs.io"
 ): string {
   if (!uri) return uri;
 
@@ -14,7 +15,7 @@ export function ipfsToGatewayUrl(
 
     // Developer convenience: if the repo still contains the placeholder genesis CID,
     // show the bundled local preview in development so the UI works without IPFS.
-    if (process.env.NODE_ENV !== 'production' && cidAndPath.startsWith('QmEIPsInsightPioneer1')) {
+    if (process.env.NODE_ENV !== 'production' && (cidAndPath.startsWith('QmEIPsInsightPioneer1') || cidAndPath.startsWith('QmEthEdPioneer1'))) {
       // Use OG image fallback in dev instead of animated GIFs
       return '/og-image.png';
     }

@@ -9,6 +9,7 @@ import { Copy, Check, ExternalLink, Share2, Twitter, Link2 } from 'lucide-react'
 import Image from 'next/image';
 import { ipfsToGatewayUrl } from '@/lib/ipfs';
 import { getExplorerTxUrl } from '@/lib/contracts';
+import AddToWalletButton from '@/components/AddToWalletButton';
 
 interface NFTShareModalProps {
   nft: {
@@ -213,6 +214,14 @@ export default function NFTShareModal({ nft, open, onClose }: NFTShareModalProps
                   View on IPFS
                 </a>
               </Button>
+            )}
+
+            {isRealTx && nft.contractAddress && nft.tokenId && (
+              <AddToWalletButton 
+                contractAddress={nft.contractAddress} 
+                tokenId={nft.tokenId} 
+                chainId={nft.chainId || undefined}
+              />
             )}
           </div>
         </div>

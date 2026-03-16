@@ -11,6 +11,7 @@ import Image from "next/image";
 import { ipfsToGatewayUrl } from "@/lib/ipfs";
 import { getExplorerTxUrl } from "@/lib/contracts";
 import Footer from "@/app/(public)/_components/footer";
+import AddToWalletButton from "@/components/AddToWalletButton";
 
 interface NFTPageProps {
   params: Promise<{ id: string }>;
@@ -163,11 +164,21 @@ export default async function NFTPublicPage({ params }: NFTPageProps) {
 
               {/* Explorer link */}
               {explorerUrl && (
-                <Button variant="outline" className="w-full" asChild>
-                  <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" /> View on Polygon Explorer
-                  </a>
-                </Button>
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" /> View on Polygon Explorer
+                    </a>
+                  </Button>
+                  
+                  {nft.contractAddress && nft.tokenId && (
+                    <AddToWalletButton 
+                      contractAddress={nft.contractAddress} 
+                      tokenId={nft.tokenId} 
+                      chainId={nft.chainId || undefined}
+                    />
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

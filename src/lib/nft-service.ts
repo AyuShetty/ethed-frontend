@@ -37,6 +37,7 @@ export interface NFTMetadata {
   name: string;
   description: string;
   image: string;
+  image_data?: string;
   courseSlug?: string;
   courseName?: string;
   attributes: Array<{
@@ -128,9 +129,10 @@ export async function uploadMetadataToIPFS(
  */
 export function generateGenesisScholarMetadata(
   imageUri: string,
-  ensName?: string
+  ensName?: string,
+  svgData?: string
 ): NFTMetadata {
-  return {
+  const metadata: NFTMetadata = {
     name: ensName ? `EIPsInsight Academy Pioneer - ${ensName}` : "EIPsInsight Academy Pioneer NFT",
     description: `Commemorates ${ensName || 'a dedicated scholar'} being an early EIPsInsight Academy pioneer and completing the onboarding journey.`,
     image: imageUri,
@@ -143,6 +145,12 @@ export function generateGenesisScholarMetadata(
     ],
     external_url: "https://academy.eipsinsight.com",
   };
+
+  if (svgData) {
+    metadata.image_data = svgData;
+  }
+  
+  return metadata;
 }
 
 /**
@@ -173,7 +181,7 @@ export async function mintNFTAndSave(
     const imageUri = await uploadCertificateToIPFS(certSvg, `pioneer-${userId}-${Date.now()}.svg`);
 
     // Generate metadata referencing the unique certificate image
-    const metadata = generateGenesisScholarMetadata(imageUri, ensName);
+    const metadata = generateGenesisScholarMetadata(imageUri, ensName, certSvg.toString('utf-8'));
 
     // Upload metadata to IPFS
     const metadataUri = await uploadMetadataToIPFS(metadata);
@@ -420,7 +428,7 @@ export async function mintGenesisNFTs(params: MintNFTParams) {
   const genesisImageUri = await uploadCertificateToIPFS(pioneerSvgBuffer, pioneerFilename);
 
   // Generate metadata (reference unique SVG)
-  const genesisMetadata = generateGenesisScholarMetadata(genesisImageUri, ensName);
+  const genesisMetadata = generateGenesisScholarMetadata(genesisImageUri, ensName, pioneerSvgBuffer.toString('utf-8'));
 
   const genesisMetadataUri = GENESIS_PIONEER_METADATA_URI
     ? GENESIS_PIONEER_METADATA_URI
@@ -527,10 +535,11 @@ export function generateCourseCompletionMetadata(
   courseName: string,
   courseSlug: string,
   recipientName?: string,
-  courseLevel?: string
+  courseLevel?: string,
+  svgData?: string
 ): NFTMetadata {
   const recipient = recipientName || "Scholar";
-  return {
+  const metadata: NFTMetadata = {
     name: `${courseName} — ${recipient}`,
     description: `On-chain certificate of completion for ${courseName} on EIPsInsight Academy, awarded to ${recipient}. This unique certificate is generated specifically for this recipient and is permanently recorded on the blockchain.`,
     image: imageUri,
@@ -548,6 +557,12 @@ export function generateCourseCompletionMetadata(
     ],
     external_url: `https://academy.eipsinsight.com/courses/${courseSlug}`,
   };
+
+  if (svgData) {
+    metadata.image_data = svgData;
+  }
+
+  return metadata;
 }
 
 /**
@@ -580,7 +595,7 @@ export async function mintCourseCompletionNFT(params: {
 
   // Generate metadata (now references the unique SVG image)
   const metadata = generateCourseCompletionMetadata(
-    imageUri, courseName, courseSlug, recipientName, courseLevel
+    imageUri, courseName, courseSlug, recipientName, courseLevel, certSvgBuffer.toString('utf-8')
   );
 
   // Upload metadata to IPFS
@@ -671,24 +686,33 @@ export async function syncUserNFTs(userId: string) {
     const address = wallet.address as `0x${string}`;
     
     try {
-      // Find all Minted events for this user
-      const logs = await publicClient.getLogs({
+      // Fetch total tokens minted
+      const currentTokenId = await publicClient.readContract({
         address: contractAddress,
-        event: {
-          type: "event",
-          name: "Minted",
-          inputs: [
-            { indexed: true, name: "to", type: "address" },
-            { indexed: true, name: "tokenId", type: "uint256" },
-          ],
-        },
-        args: { to: address },
-        fromBlock: BigInt(0), // Start from genesis for Amoy
-      });
+        abi: NFT_CONTRACT_ABI,
+        functionName: "getCurrentTokenId",
+      }) as bigint;
 
-      for (const log of logs) {
-        const tokenIdInt = log.args.tokenId;
-        if (tokenIdInt === undefined) continue;
+      const userTokens: bigint[] = [];
+      // This is a naive loop. For large collections, a subgraph or batched queries are better.
+      // But it avoids RPC block range limits.
+      for (let i = 0n; i < currentTokenId; i++) {
+        try {
+          const owner = await publicClient.readContract({
+            address: contractAddress,
+            abi: NFT_CONTRACT_ABI,
+            functionName: "ownerOf",
+            args: [i],
+          }) as string;
+          if (owner.toLowerCase() === address.toLowerCase()) {
+            userTokens.push(i);
+          }
+        } catch (e) {
+          // Token might not exist or burned
+        }
+      }
+
+      for (const tokenIdInt of userTokens) {
         const tokenId = tokenIdInt.toString();
 
         // Check if we already have this NFT by tokenId and contractAddress
@@ -713,7 +737,8 @@ export async function syncUserNFTs(userId: string) {
             // Fetch metadata JSON
             let metadata: NFTMetadata;
             if (tokenUri.startsWith('ipfs://')) {
-              const gatewayUrl = `https://gateway.pinata.cloud/ipfs/${tokenUri.replace('ipfs://', '')}`;
+              // Using ipfs.io as default gateway to avoid 429 errors from public pinata gateway
+              const gatewayUrl = `https://ipfs.io/ipfs/${tokenUri.replace('ipfs://', '')}`;
               const metadataRes = await fetch(gatewayUrl);
               if (!metadataRes.ok) throw new Error(`HTTP ${metadataRes.status} fetching metadata`);
               metadata = await metadataRes.json() as NFTMetadata;

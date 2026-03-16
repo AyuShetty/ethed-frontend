@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { getBlockchainErrorInfo } from '@/lib/blockchain-errors';
 import { getExplorerTxUrl } from '@/lib/contracts';
+import { switchToChain, getWalletChainId, parseWalletError } from '@/lib/wallet-client';
+import { AMOY_CHAIN_ID } from '@/lib/contracts';
 
 interface ClaimResult {
   nft?: {
@@ -48,8 +50,46 @@ export function useClaimNFT() {
           toast.success('🎉 NFT minted on-chain!', {
             description: `${nft?.name} has been minted to ${nft?.ownerAddress ? `${nft.ownerAddress.slice(0, 6)}...${nft.ownerAddress.slice(-4)}` : 'your wallet'}.${nft?.tokenId ? ` Token #${nft.tokenId}` : ''}`,
             duration: 10000,
-            action: explorerUrl ? {
-              label: 'View on Explorer',
+            action: {
+              label: 'Add to Wallet',
+              onClick: async () => {
+                try {
+                  if (typeof window !== 'undefined' && (window as any).ethereum && nft?.contractAddress && nft?.tokenId) {
+                    const targetChainId = nft.chainId || AMOY_CHAIN_ID;
+                    const currentChainId = await getWalletChainId();
+                    
+                    if (currentChainId !== targetChainId) {
+                      try {
+                        await switchToChain(targetChainId);
+                      } catch (switchError) {
+                        console.error('Failed to switch chain:', switchError);
+                        toast.error('Please switch your wallet to Polygon before adding the NFT.');
+                        return;
+                      }
+                    }
+
+                    await (window as any).ethereum.request({
+                      method: 'wallet_watchAsset',
+                      params: {
+                        type: 'ERC721',
+                        options: {
+                          address: nft.contractAddress,
+                          tokenId: nft.tokenId,
+                        },
+                      },
+                    });
+                    toast.success('Added to wallet successfully!');
+                  } else {
+                    toast.error('No supported wallet found or NFT details missing.');
+                  }
+                } catch (e: any) {
+                  const friendlyError = parseWalletError(e);
+                  toast.error('Could not add to wallet', { description: friendlyError });
+                }
+              },
+            },
+            cancel: explorerUrl ? {
+              label: 'View Explorer',
               onClick: () => window.open(explorerUrl, '_blank'),
             } : undefined,
           });
@@ -82,5 +122,52 @@ export function useClaimNFT() {
     }
   };
 
-  return { claimNFT, isClaiming, claimed, claimResult };
+  const addToWallet = async () => {
+    if (!claimResult?.nft?.contractAddress || !claimResult?.nft?.tokenId) {
+      toast.error('NFT details missing or not on-chain yet.');
+      return;
+    }
+    
+    try {
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        const targetChainId = claimResult.nft.chainId || AMOY_CHAIN_ID;
+        const currentChainId = await getWalletChainId();
+        
+        if (currentChainId !== targetChainId) {
+          try {
+            await switchToChain(targetChainId);
+          } catch (switchError) {
+            console.error('Failed to switch chain:', switchError);
+            toast.error('Please switch your wallet to Polygon before adding the NFT.');
+            return;
+          }
+        }
+
+        await (window as any).ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC721',
+            options: {
+              address: claimResult.nft.contractAddress,
+              tokenId: claimResult.nft.tokenId,
+            },
+          },
+        });
+        toast.success('Successfully added to your wallet!');
+      } else {
+        toast.error('No Ethereum provider found. Please install a wallet like MetaMask.');
+      }
+    } catch (e: any) {
+      const friendlyError = parseWalletError(e);
+      // Suppress noisy wallet_watchAsset console errors in tests
+      if (friendlyError.includes('syncing the newly minted token')) {
+        console.warn('Could not add to wallet (ownership sync pending).', e && e.message ? e.message : e);
+      } else {
+        console.error('Failed to add to wallet:', e && e.message ? e.message : e);
+      }
+      toast.error('Could not add to wallet', { description: friendlyError });
+    }
+  };
+
+  return { claimNFT, isClaiming, claimed, claimResult, addToWallet };
 }

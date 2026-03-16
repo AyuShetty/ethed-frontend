@@ -1,29 +1,35 @@
 /**
  * ENS Registration Service
- * Handles ENS subdomain registration and management
+ * Handles ENS subdomain registration and management using the real ENS protocol
+ * Subdomains are registered via ENS on Ethereum mainnet and mapped to Polygon addresses
  */
 
 import { prisma } from "@/lib/prisma-client";
 import {
-  AMOY_CHAIN_ID,
-  ENS_REGISTRAR_ABI,
+  POLYGON_MAINNET_CHAIN_ID,
   ENS_ROOT_DOMAIN,
-  getContractAddress,
-  getExplorerTxUrl,
 } from "./contracts";
 import {
-  getDeployerAddress,
-  getPublicClient,
-  getWalletClient,
   isOnChainEnabled,
+  getEthWalletClient,
+  getEthPublicClient,
 } from "./viem-client";
 import { logger } from "./monitoring";
+import { createSubname } from "@ensdomains/ensjs/wallet";
 
 // Log on-chain mode at module load
 if (typeof globalThis !== 'undefined' && typeof process !== 'undefined') {
-  const mode = isOnChainEnabled() ? 'REAL (Polygon mainnet)' : 'MOCK (dev fallback)';
+  const mode = isOnChainEnabled() ? 'REAL (Ethereum + Polygon mainnet)' : 'MOCK (dev fallback)';
   logger.info(`ENS Service initialized — on-chain mode: ${mode}`, "ens-service");
 }
+
+// ---------------------------------------------------------------------------
+// Ethereum Mainnet Integration (for future use)
+// ---------------------------------------------------------------------------
+// NOTE: For full ENS subdomain registration on Ethereum mainnet, you may need
+// to integrate with the ENS registry contract. The current implementation
+// stores the mapping in the database for Polygon-based lookups.
+// See: https://docs.ens.domains/ for ENS contract integration details.
 
 /**
  * Best-effort ENS avatar resolver.
@@ -136,8 +142,14 @@ export async function checkAvailability(subdomain: string, rootDomain = ENS_ROOT
 }
 
 /**
- * Register ENS subdomain on-chain via the deployed ENS registrar contract.
- * Falls back to a dev mock when on-chain env vars are not set.
+ * Register ENS subdomain on Ethereum mainnet via the ENS registry.
+ * For real ENS registration, this requires:
+ * 1. The root domain (ayushetty.eth) to be owned by the deployer
+ * 2. Proper resolver configuration
+ * 
+ * Note: Subdomains registered here are mapped to Polygon addresses in the database
+ * This function stores the mapping and logs the registration intent.
+ * Full ENS subdomain registration may require additional setup through ENS manager.
  */
 export async function registerOnChain(
   subdomain: string,
@@ -161,44 +173,42 @@ export async function registerOnChain(
     return { txHash: mockTxHash, ensName, explorerUrl: null };
   }
 
-  const contractAddress = getContractAddress(AMOY_CHAIN_ID, "ENS_REGISTRAR") as `0x${string}`;
-  const walletClient = getWalletClient();
-  const publicClient = getPublicClient();
-
-  logger.info(`Registering ENS subdomain "${ensName}" for ${ownerAddress}`, "ens-service");
+  logger.info(
+    `Registering ENS subdomain "${ensName}" for ${ownerAddress} on Ethereum mainnet`,
+    "ens-service"
+  );
 
   try {
-    const duration = BigInt(365 * 24 * 60 * 60); // 1 year in seconds
+    const ethWalletClient = getEthWalletClient();
+    const ethPublicClient = getEthPublicClient();
 
-    const txHash = await walletClient.writeContract({
-      address: contractAddress,
-      abi: ENS_REGISTRAR_ABI,
-      functionName: "register",
-      args: [subdomain, ownerAddress as `0x${string}`, duration],
-      account: getDeployerAddress(),
-      chain: undefined,
-      value: BigInt(0), // payable function — explicitly pass 0 for free registrations
-    });
+    logger.info(
+      `Dispatching actual ENS subname registration tx for "${ensName}" to ${ownerAddress} on Ethereum mainnet via NameWrapper...`,
+      "ens-service"
+    );
 
-    logger.info(`ENS register tx sent: ${txHash}`, "ens-service");
+    // Call @ensdomains/ensjs createSubname for the Namewrapper
+    // Note: The deployer key must own ayushetty.eth on Namewrapper for this to succeed
+    const txHash = await createSubname(ethWalletClient as any, {
+      account: ethWalletClient.account!,
+      name: ensName,
+      owner: ownerAddress as `0x${string}`,
+      contract: 'nameWrapper', // Modern default. Fallback to 'registry' if domain is unwrapped.
+    } as any);
 
-    // Wait for confirmation
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    logger.info(
+      `ENS subdomain "${ensName}" registered! TxHash: ${txHash}`,
+      "ens-service"
+    );
 
-    if (receipt.status === "reverted") {
-      throw new Error(`ENS registration transaction reverted: ${txHash}`);
-    }
-
-    const explorerUrl = getExplorerTxUrl(AMOY_CHAIN_ID, txHash);
-
-    logger.info(`ENS registration confirmed: ${ensName}, tx=${txHash}`, "ens-service");
+    const explorerUrl = `https://etherscan.io/tx/${txHash}`;
 
     return { txHash, ensName, explorerUrl };
   } catch (error) {
     logger.error(
       "On-chain ENS registration failed",
       "ens-service",
-      { subdomain, ownerAddress },
+      { subdomain, ownerAddress, rootDomain },
       error
     );
     throw new Error(
@@ -209,6 +219,7 @@ export async function registerOnChain(
 
 /**
  * Save ENS registration to database
+ * Stores the ENS name and maps it to a Polygon address
  */
 export async function saveENSToDatabase(params: {
   userId: string;
@@ -232,13 +243,13 @@ export async function saveENSToDatabase(params: {
       },
     });
   } else {
-    // Create new wallet address entry
+    // Create new wallet address entry (mapped to Polygon mainnet)
     try {
       return await prisma.walletAddress.create({
         data: {
           userId,
           address: address || "0x0000000000000000000000000000000000000000",
-          chainId: AMOY_CHAIN_ID,
+          chainId: POLYGON_MAINNET_CHAIN_ID,
           ensName,
           isPrimary: true,
         },

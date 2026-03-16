@@ -3,7 +3,12 @@
  *
  * Contract addresses can be overridden via environment variables:
  *   NFT_CONTRACT_ADDRESS      – deployed ERC-721 on Polygon mainnet
- *   ENS_REGISTRAR_ADDRESS     – deployed ENS registrar on Polygon mainnet
+ * 
+ * ENS Integration:
+ * - Uses the real ENS protocol on Ethereum mainnet
+ * - Subdomains of ayushetty.eth are registered via the ENS registry
+ * - No custom registrar contract needed
+ * - Requires: DEPLOYER_PRIVATE_KEY (for signing on Ethereum) and ETHEREUM_RPC_URL (optional)
  */
 
 import { logger } from "./monitoring";
@@ -60,7 +65,8 @@ export const NFT_CONTRACT_ABI = [
   },
 ] as const;
 
-// ENS Registrar Contract ABI
+// ENS Registrar Contract ABI (DEPRECATED - Using real ENS protocol on Ethereum)
+// Kept for backward compatibility only
 export const ENS_REGISTRAR_ABI = [
   {
     inputs: [
@@ -98,10 +104,9 @@ export const ENS_REGISTRAR_ABI = [
 // Polygon mainnet addresses must be provided explicitly through env vars.
 // We intentionally do not fall back to old Amoy deployments.
 export const CONTRACTS: Record<number, Record<string, string>> = {
-  // Polygon Mainnet
+  // Polygon Mainnet - Only NFT_CONTRACT_ADDRESS needed (ENS uses real protocol on Ethereum)
   [POLYGON_MAINNET_CHAIN_ID]: {
     NFT_CONTRACT: process.env.NFT_CONTRACT_ADDRESS || ZERO_ADDRESS,
-    ENS_REGISTRAR: process.env.ENS_REGISTRAR_ADDRESS || ZERO_ADDRESS,
   },
 };
 
@@ -196,15 +201,13 @@ export function getExplorerAddressUrl(chainId: number, address: string): string 
 // Production safety: warn about placeholder addresses
 // ---------------------------------------------------------------------------
 if (process.env.NODE_ENV === "production") {
-  const polygonContracts = CONTRACTS[AMOY_CHAIN_ID];
+  const polygonContracts = CONTRACTS[POLYGON_MAINNET_CHAIN_ID];
   if (polygonContracts) {
-    for (const [name, addr] of Object.entries(polygonContracts)) {
-      if (addr === ZERO_ADDRESS) {
-        logger.warn(
-          `${name} on Polygon mainnet uses placeholder address 0x000...000. Set NFT_CONTRACT_ADDRESS / ENS_REGISTRAR_ADDRESS env vars.`,
-          "contracts"
-        );
-      }
+    if ((polygonContracts.NFT_CONTRACT || ZERO_ADDRESS) === ZERO_ADDRESS) {
+      logger.warn(
+        `NFT_CONTRACT_ADDRESS on Polygon mainnet uses placeholder address 0x000...000. Set NFT_CONTRACT_ADDRESS env var.`,
+        "contracts"
+      );
     }
   }
 }
