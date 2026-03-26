@@ -64,6 +64,7 @@ interface ProfileData {
     metadata: any;
     contractAddress: string | null;
     transactionHash: string | null;
+    ownerAddress?: string | null;
     chainId: number | null;
     createdAt: string;
     type: string;

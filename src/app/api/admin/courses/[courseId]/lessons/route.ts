@@ -14,15 +14,18 @@ import { z } from "zod";
 
 const LessonCreateSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  content: z.string().min(1, "Content is required"),
+  content: z.string().optional(),
+  sectionId: z.string().optional(),
   duration: z.number().int().positive().optional(),
 });
 
 const LessonUpdateSchema = z.object({
   lessonId: z.string().min(1),
   title: z.string().min(3).optional(),
-  content: z.string().min(1).optional(),
+  content: z.string().optional(),
+  sectionId: z.string().nullable().optional(),
   duration: z.number().int().positive().nullable().optional(),
+  order: z.number().int().min(0).optional(),
 });
 
 export async function GET(
@@ -42,13 +45,59 @@ export async function GET(
       slug: true,
       status: true,
       level: true,
+      sections: {
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          title: true,
+          order: true,
+          lessons: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              duration: true,
+              order: true,
+              contentBlocks: {
+                orderBy: { order: "asc" },
+                select: {
+                  id: true,
+                  type: true,
+                  order: true,
+                  textContent: true,
+                  videoUrl: true,
+                  codeLanguage: true,
+                  quizData: true,
+                },
+              },
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+      },
       lessons: {
-        orderBy: { createdAt: "asc" },
+        where: { sectionId: null },
+        orderBy: { order: "asc" },
         select: {
           id: true,
           title: true,
           content: true,
           duration: true,
+          order: true,
+          contentBlocks: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              type: true,
+              order: true,
+              textContent: true,
+              videoUrl: true,
+              codeLanguage: true,
+              quizData: true,
+            },
+          },
           createdAt: true,
           updatedAt: true,
         },
@@ -86,12 +135,29 @@ export async function POST(
     );
   }
 
+  // Verify section exists if provided
+  if (parse.data.sectionId) {
+    const section = await prisma.section.findFirst({
+      where: { id: parse.data.sectionId, courseId },
+    });
+    if (!section) {
+      return NextResponse.json({ error: "Section not found" }, { status: 404 });
+    }
+  }
+
+  const maxOrder = await prisma.lesson.aggregate({
+    where: { courseId, sectionId: parse.data.sectionId || null },
+    _max: { order: true },
+  });
+
   const lesson = await prisma.lesson.create({
     data: {
       courseId,
       title: parse.data.title,
-      content: parse.data.content,
+      content: parse.data.content || null,
+      sectionId: parse.data.sectionId || null,
       duration: parse.data.duration ?? null,
+      order: (maxOrder._max.order ?? -1) + 1,
     },
   });
 
@@ -124,7 +190,7 @@ export async function PUT(
     );
   }
 
-  const { lessonId, title, content, duration } = parse.data;
+  const { lessonId, title, content, sectionId, duration, order } = parse.data;
 
   // Ensure lesson belongs to this course
   const existing = await prisma.lesson.findFirst({
@@ -134,12 +200,24 @@ export async function PUT(
     return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
   }
 
+  // Verify section exists if provided
+  if (sectionId !== undefined && sectionId !== null) {
+    const section = await prisma.section.findFirst({
+      where: { id: sectionId, courseId },
+    });
+    if (!section) {
+      return NextResponse.json({ error: "Section not found" }, { status: 404 });
+    }
+  }
+
   const lesson = await prisma.lesson.update({
     where: { id: lessonId },
     data: {
       ...(title !== undefined && { title }),
       ...(content !== undefined && { content }),
+      ...(sectionId !== undefined && { sectionId }),
       ...(duration !== undefined && { duration }),
+      ...(order !== undefined && { order }),
     },
   });
 

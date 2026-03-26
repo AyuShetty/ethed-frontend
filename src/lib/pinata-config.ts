@@ -27,6 +27,8 @@ export const pinata = new PinataSDK({
 // ---------------------------------------------------------------------------
 
 export interface PinataUploadResult {
+  id?: string;
+  cid?: string;
   IpfsHash: string;
   PinSize: number;
   Timestamp: string;
@@ -40,8 +42,12 @@ export async function pinFile(file: File): Promise<string> {
   if (!env.PINATA_JWT) {
     throw new Error("Pinata not configured (PINATA_JWT missing)");
   }
-  const result = (await (pinata as unknown as { upload: { file: (f: File) => Promise<PinataUploadResult> } }).upload.file(file)) as PinataUploadResult;
-  return `ipfs://${result.IpfsHash}`;
+  const result = (await (pinata as unknown as { upload: { public: { file: (f: File) => Promise<PinataUploadResult> } } }).upload.public.file(file)) as PinataUploadResult;
+  const cid = result.cid || result.IpfsHash;
+  if (!cid) {
+    throw new Error("Pinata upload did not return a CID");
+  }
+  return `ipfs://${cid}`;
 }
 
 /**
@@ -52,6 +58,10 @@ export async function pinJSON(data: Record<string, unknown>): Promise<string> {
   if (!env.PINATA_JWT) {
     throw new Error("Pinata not configured (PINATA_JWT missing)");
   }
-  const result = (await (pinata as unknown as { upload: { json: (d: Record<string, unknown>) => Promise<PinataUploadResult> } }).upload.json(data)) as PinataUploadResult;
-  return `ipfs://${result.IpfsHash}`;
+  const result = (await (pinata as unknown as { upload: { public: { json: (d: Record<string, unknown>) => Promise<PinataUploadResult> } } }).upload.public.json(data)) as PinataUploadResult;
+  const cid = result.cid || result.IpfsHash;
+  if (!cid) {
+    throw new Error("Pinata upload did not return a CID");
+  }
+  return `ipfs://${cid}`;
 }

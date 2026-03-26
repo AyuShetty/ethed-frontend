@@ -86,6 +86,10 @@ export async function uploadMetadataToIPFS(
 ): Promise<string> {
   // IPFS-first: prefer Pinata when configured. If missing, provide a dev fallback.
   if (!env.PINATA_JWT) {
+    if (isOnChainEnabled()) {
+      throw new Error('Pinata is required for on-chain minting. Configure PINATA_JWT so tokenURI is publicly accessible.');
+    }
+
     if (env.NODE_ENV === 'production') {
       throw new Error('Pinata not configured — PINATA_JWT is required in production');
     }
@@ -107,6 +111,10 @@ export async function uploadMetadataToIPFS(
     return await pinJSON(metadata as unknown as Record<string, unknown>);
   } catch {
     // If Pinata fails in dev, fallback to local file; in prod propagate error
+    if (isOnChainEnabled()) {
+      throw new Error('Failed to upload metadata to Pinata for on-chain minting.');
+    }
+
     if (env.NODE_ENV !== 'production') {
       try {
         const outDir = `${process.cwd()}/public/local-metadata`;
@@ -262,6 +270,17 @@ export async function mintOnChain(
     return { tokenId: mockTokenId, txHash: "", contractAddress };
   }
 
+  const isPublicUri =
+    metadataUri.startsWith("ipfs://") ||
+    metadataUri.startsWith("https://") ||
+    metadataUri.startsWith("http://");
+
+  if (!isPublicUri) {
+    throw new Error(
+      `Invalid metadata URI for on-chain minting: ${metadataUri}. Use a public IPFS/HTTP URL.`
+    );
+  }
+
   const publicClient = getPublicClient();
   const walletClient = getWalletClient();
   const deployerAccount = getDeployerAccount();
@@ -327,18 +346,24 @@ export async function mintOnChain(
       throw new Error(`Mint transaction reverted: ${txHash}`);
     }
 
-    // Try to extract the tokenId from the Minted event log
+    // Extract tokenId from ERC-721 Transfer mint event (from zero address).
+    // Previous logic read topics[2] from any log, which could incorrectly parse an address as tokenId.
     let tokenId = `${Date.now()}`;
     try {
+      const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
       for (const log of receipt.logs) {
         try {
-          // The Minted event has indexed `to` and indexed `tokenId`
-          if (log.topics.length >= 3) {
-            // tokenId is the second indexed param (topics[2])
-            const raw = BigInt(log.topics[2]!);
-            tokenId = raw.toString();
-            break;
-          }
+          const topic0 = log.topics[0]?.toLowerCase();
+          if (topic0 !== transferTopic || log.topics.length < 4) continue;
+
+          // Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+          const from = BigInt(log.topics[1]!);
+          if (from !== 0n) continue;
+
+          const rawTokenId = BigInt(log.topics[3]!);
+          tokenId = rawTokenId.toString();
+          break;
         } catch {
           // Not our event, continue
         }
@@ -768,7 +793,7 @@ export async function syncUserNFTs(userId: string) {
                 contractAddress,
                 chainId: AMOY_CHAIN_ID,
                 ownerAddress: address,
-                transactionHash: log.transactionHash,
+                transactionHash: null,
               }
             });
             syncedCount++;

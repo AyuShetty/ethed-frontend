@@ -34,12 +34,30 @@ interface Stats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/stats')
-      .then(r => r.json())
-      .then(data => { setStats(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    const fetchStats = async () => {
+      try {
+        setError(null);
+        const res = await fetch('/api/admin/stats');
+        if (!res.ok) {
+          throw new Error(`Failed to load stats: ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        setStats(data);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load dashboard stats';
+        setError(message);
+        console.error('Admin stats error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
   }, []);
 
   if (loading) {
@@ -49,6 +67,31 @@ export default function AdminDashboard() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-400 mx-auto mb-4" />
           <p className="text-slate-300">Loading dashboard…</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="border-red-500/50 bg-red-500/10 max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-400 flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Error Loading Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-300 mb-4">{error}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="text-red-400 border-red-400/50 hover:bg-red-500/10"
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

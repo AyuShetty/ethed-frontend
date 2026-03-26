@@ -191,8 +191,10 @@ model UserCourse {
   userId    String
   courseId  String
   progress  Int      @default(0) // percent
-  completedModules  Json?   // Arry of module IDs
+  completedModules  Json?   // Array of module IDs
   completed Boolean  @default(false)
+  quizPassed Boolean? // null = not attempted, true = passed, false = failed
+  quizScore Int?     // 0-100 score on final quiz
   startedAt DateTime @default(now())
   finishedAt DateTime?
 

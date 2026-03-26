@@ -33,7 +33,7 @@ export const courses: Course[] = [
     category: "Identity",
     tags: ["ENS", "Identity", "Domains", "Web3"],
     instructor: "Ayush Shetty",
-    thumbnail: "/courses/ens-101.jpg",
+    thumbnail: "/courses/ens-101.svg",
     isPopular: true,
     progress: 0,
     nftReward: "ENS Explorer NFT"
@@ -51,7 +51,7 @@ export const courses: Course[] = [
     category: "Protocol",
     tags: ["EIP", "Ethereum", "Governance", "Core"],
     instructor: "Nick Johnson",
-    thumbnail: "/courses/eips-101.jpg",
+    thumbnail: "/courses/eips-101.svg",
     isNew: true,
     progress: 0,
     nftReward: "Protocol Pioneer NFT"
@@ -69,7 +69,7 @@ export const courses: Course[] = [
     category: "AI",
     tags: ["0G", "DA", "AI", "Infrastructure"],
     instructor: "Conflux Team",
-    thumbnail: "/courses/0g-101.jpg",
+    thumbnail: "/courses/0g-101.svg",
     isNew: true,
     progress: 0,
     nftReward: "0G Innovator NFT"

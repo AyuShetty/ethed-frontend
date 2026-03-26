@@ -20,6 +20,7 @@ interface NFTShareModalProps {
     tokenId: string | null;
     metadata: Record<string, unknown> | string | null;
     contractAddress?: string | null;
+    ownerAddress?: string | null;
     transactionHash?: string | null;
     chainId?: number | null;
     createdAt: string;
@@ -221,6 +222,7 @@ export default function NFTShareModal({ nft, open, onClose }: NFTShareModalProps
                 contractAddress={nft.contractAddress} 
                 tokenId={nft.tokenId} 
                 chainId={nft.chainId || undefined}
+                ownerAddress={nft.ownerAddress || undefined}
               />
             )}
           </div>

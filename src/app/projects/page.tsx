@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Search, Users, Target, ArrowRight, Sparkles, Loader2,
   FolderOpen, TrendingUp, Calendar, User, DollarSign, Layers,
-  Filter, Heart,
+  Filter, Heart, AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -57,6 +57,7 @@ export default function ProjectsPage() {
   const { data: session } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -77,18 +78,26 @@ export default function ProjectsPage() {
 
   const fetchProjects = async () => {
     try {
+      setError(null);
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (typeFilter !== 'all') params.set('type', typeFilter);
       params.set('limit', '50');
 
       const res = await fetch(`/api/projects?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error(`Failed to load projects: ${res.status}`);
+      }
       const data = await res.json();
       if (data.success) {
         setProjects(data.projects);
+      } else {
+        throw new Error(data.error || 'Failed to load projects');
       }
-    } catch {
-      toast.error('Failed to load projects');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load projects';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -319,6 +328,27 @@ export default function ProjectsPage() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="max-w-md mx-auto py-20">
+            <Card className="border-red-500/50 bg-red-500/10">
+              <CardHeader>
+                <CardTitle className="text-red-400 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Error Loading Projects
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-300 mb-4">{error}</p>
+                <Button 
+                  onClick={() => { setError(null); fetchProjects(); }} 
+                  variant="outline"
+                  className="text-red-400 border-red-400/50 hover:bg-red-500/10"
+                >
+                  Try Again
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 max-w-md mx-auto">

@@ -3,6 +3,22 @@ import { prisma } from "./prisma-client";
 const XP_PER_LESSON = 10;
 const XP_FOR_STREAK = 5;
 
+// Better level thresholds for gamification (progressive XP requirements)
+const LEVEL_THRESHOLDS = [
+  { level: 1, minXp: 0 },
+  { level: 2, minXp: 1000 },
+  { level: 3, minXp: 2500 },
+  { level: 4, minXp: 5000 },
+  { level: 5, minXp: 8000 },
+  { level: 10, minXp: 15000 },
+  { level: 20, minXp: 30000 },
+];
+
+export function calculateLevel(totalXp: number): number {
+  const level = [...LEVEL_THRESHOLDS].reverse().find(t => t.minXp <= totalXp)?.level || 1;
+  return level;
+}
+
 export async function addXpAndProgress(userId: string, lessonId?: string, customXp?: number) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -34,8 +50,8 @@ export async function addXpAndProgress(userId: string, lessonId?: string, custom
     newStreak = 1;
   }
 
-  // Level logic (simple: every 100 XP is a level)
-  const newLevel = Math.floor(newXp / 100) + 1;
+  // Use improved level calculation with thresholds
+  const newLevel = calculateLevel(newXp);
 
   // Update user
   const updatedUser = await prisma.user.update({

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { getBlockchainErrorInfo } from '@/lib/blockchain-errors';
 import { getExplorerTxUrl } from '@/lib/contracts';
-import { switchToChain, getWalletChainId, parseWalletError } from '@/lib/wallet-client';
+import { switchToChain, getWalletChainId, getActiveWalletAddress, parseWalletError } from '@/lib/wallet-client';
 import { AMOY_CHAIN_ID } from '@/lib/contracts';
 
 interface ClaimResult {
@@ -29,10 +29,17 @@ export function useClaimNFT() {
 
     setIsClaiming(true);
     try {
+      const activeWalletAddress = await getActiveWalletAddress();
+      console.log('=== Claim NFT Hook Debug ===');
+      console.log('activeWalletAddress:', activeWalletAddress);
+
       const res = await fetch('/api/user/course/claim-nft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseSlug })
+        body: JSON.stringify({
+          courseSlug,
+          userAddress: activeWalletAddress || undefined,
+        })
       });
 
       const data = await res.json();
@@ -57,6 +64,14 @@ export function useClaimNFT() {
                   if (typeof window !== 'undefined' && (window as any).ethereum && nft?.contractAddress && nft?.tokenId) {
                     const targetChainId = nft.chainId || AMOY_CHAIN_ID;
                     const currentChainId = await getWalletChainId();
+                    const activeAddress = await getActiveWalletAddress();
+
+                    if (activeAddress && nft.ownerAddress && activeAddress.toLowerCase() !== nft.ownerAddress.toLowerCase()) {
+                      toast.error('Active wallet does not own this NFT', {
+                        description: `Switch MetaMask to ${nft.ownerAddress.slice(0, 6)}...${nft.ownerAddress.slice(-4)} before adding Token #${nft.tokenId}.`,
+                      });
+                      return;
+                    }
                     
                     if (currentChainId !== targetChainId) {
                       try {
@@ -132,6 +147,18 @@ export function useClaimNFT() {
       if (typeof window !== 'undefined' && (window as any).ethereum) {
         const targetChainId = claimResult.nft.chainId || AMOY_CHAIN_ID;
         const currentChainId = await getWalletChainId();
+        const activeAddress = await getActiveWalletAddress();
+
+        if (
+          activeAddress &&
+          claimResult.nft.ownerAddress &&
+          activeAddress.toLowerCase() !== claimResult.nft.ownerAddress.toLowerCase()
+        ) {
+          toast.error('Active wallet does not own this NFT', {
+            description: `Switch MetaMask to ${claimResult.nft.ownerAddress.slice(0, 6)}...${claimResult.nft.ownerAddress.slice(-4)} before adding Token #${claimResult.nft.tokenId}.`,
+          });
+          return;
+        }
         
         if (currentChainId !== targetChainId) {
           try {
@@ -159,9 +186,14 @@ export function useClaimNFT() {
       }
     } catch (e: any) {
       const friendlyError = parseWalletError(e);
+      const lowerFriendlyError = friendlyError.toLowerCase();
       // Suppress noisy wallet_watchAsset console errors in tests
-      if (friendlyError.includes('syncing the newly minted token')) {
-        console.warn('Could not add to wallet (ownership sync pending).', e && e.message ? e.message : e);
+      if (
+        lowerFriendlyError.includes('syncing the newly minted token') ||
+        lowerFriendlyError.includes('selected wallet account does not own this nft') ||
+        lowerFriendlyError.includes('ownership details do not match')
+      ) {
+        console.warn('Could not add to wallet (ownership mismatch or sync pending).', e && e.message ? e.message : e);
       } else {
         console.error('Failed to add to wallet:', e && e.message ? e.message : e);
       }

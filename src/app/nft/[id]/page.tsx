@@ -176,6 +176,7 @@ export default async function NFTPublicPage({ params }: NFTPageProps) {
                       contractAddress={nft.contractAddress} 
                       tokenId={nft.tokenId} 
                       chainId={nft.chainId || undefined}
+                      ownerAddress={(nft as unknown as { ownerAddress?: string | null }).ownerAddress || undefined}
                     />
                   )}
                 </div>

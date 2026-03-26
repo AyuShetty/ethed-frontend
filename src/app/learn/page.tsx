@@ -206,9 +206,17 @@ export default function CoursesPage() {
                           {course.category}
                         </Badge>
                       </div>
-                      <div className="w-full h-full bg-slate-800 transition-transform duration-500 group-hover:scale-110 flex items-center justify-center text-slate-600">
-                        <BookOpen className="w-12 h-12" />
-                      </div>
+                      {course.thumbnail ? (
+                        <img 
+                          src={course.thumbnail} 
+                          alt={course.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-slate-800 transition-transform duration-500 group-hover:scale-110 flex items-center justify-center text-slate-600">
+                          <BookOpen className="w-12 h-12" />
+                        </div>
+                      )}
                     </div>
                     <CardHeader className="flex-1 p-6">
                       <div className="flex justify-between items-start mb-2">

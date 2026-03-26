@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -10,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { useClaimNFT } from '@/hooks/use-claim-nft';
+import { logger } from '@/lib/monitoring';
 
 interface QuizQuestion { question: string; options: string[]; answer: number }
 
@@ -773,14 +775,13 @@ interface LessonViewerProps {
   moduleId: string;
 }
 
-import { useRouter } from 'next/navigation';
-
 export default function LessonViewer({ moduleId }: LessonViewerProps) {
   const router = useRouter();
   const [lesson, setLesson] = useState<LessonContent | null>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState<number | null>(null);
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
 
   const moduleNumber = parseInt(moduleId);
   const totalModules = Object.keys(lessonContents).length;
@@ -806,22 +807,40 @@ export default function LessonViewer({ moduleId }: LessonViewerProps) {
     // initial lesson load handled by hook; nothing to do here
   }, [moduleNumber]);
 
-  const finishCourseBackend = async () => {
+  const finishCourseBackend = async (passedQuiz?: boolean, score?: number) => {
+    if (isSubmittingCompletion) return; // Prevent concurrent submissions
+    setIsSubmittingCompletion(true);
     try {
       const res = await fetch('/api/user/course/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseSlug: 'eips-101' })
+        body: JSON.stringify({
+          courseSlug: 'eips-101',
+          quizPassed: passedQuiz ?? null,
+          quizScore: score ?? null
+        })
       });
       if (res.ok) {
-        toast.success('Course completed! 🎉');
+        const data = await res.json();
+        const xpAwarded = data.xpAwarded || 60;
+        // Show XP gain with celebration emoji
+        toast.success(`Course completed! 🎉 +${xpAwarded} XP`, {
+          duration: 4000,
+          description: 'Check your profile to see your new level!'
+        });
+        logger.info(`Course completion success, XP awarded: ${xpAwarded}`, 'LessonViewer');
       } else {
-        // API returned non-OK — will retry on next completion attempt
+        const error = await res.json();
+        toast.error(error.error || 'Failed to complete course');
+        logger.error('Course completion failed', 'LessonViewer', undefined, error);
       }
       // refresh server data (profile etc.)
       try { router.refresh(); } catch (e) { /* ignore */ }
     } catch (err) {
-      // finish course API error — silently handled
+      toast.error('Network error completing course');
+      logger.error('Course completion network error', 'LessonViewer', undefined, err);
+    } finally {
+      setIsSubmittingCompletion(false);
     }
   };
 
@@ -851,7 +870,8 @@ export default function LessonViewer({ moduleId }: LessonViewerProps) {
       if (!completedModules.has(moduleNumber)) {
         markAsCompleted();
       }
-      await finishCourseBackend();
+      // Pass quiz data if this is the final quiz module
+      await finishCourseBackend(quizScore !== null ? quizScore >= 0.7 : undefined, quizScore !== null ? Math.round(quizScore * 100) : undefined);
       window.location.href = '/courses/eips-101';
     }
   };
@@ -1201,14 +1221,19 @@ export default function LessonViewer({ moduleId }: LessonViewerProps) {
                     window.location.href = `/courses/eips-101/lesson/${moduleNumber + 1}`;
                   } else {
                     // ensure last module persisted then navigate back to course
-                    try { await finishCourseBackend(); } catch (e) {}
-                    window.location.href = '/courses/eips-101';
+                    await finishCourseBackend();
+                    // Only navigate away if not already submitting
+                    if (!isSubmittingCompletion) {
+                      window.location.href = '/courses/eips-101';
+                    }
                   }
                 }}
-                className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl"
+                disabled={isSubmittingCompletion}
+                className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                {isSubmittingCompletion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {moduleNumber === totalModules ? 'Finish Course' : 'Next Lesson'}
-                <ArrowRight className="ml-2 h-4 w-4" />
+                {!isSubmittingCompletion && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </div>
           </motion.div>

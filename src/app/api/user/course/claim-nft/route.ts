@@ -86,6 +86,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // DEBUG: Log which address is being used
+    logger.info(
+      `Claim NFT: providedAddress=${providedAddress}, selectedAddress=${userAddress}, isPrimary=${user.wallets.find(w => w.isPrimary)?.address}`,
+      "nft-claim-debug"
+    );
+
     // 3. Verify course completion
     const userCourse = await prisma.userCourse.findUnique({
       where: {

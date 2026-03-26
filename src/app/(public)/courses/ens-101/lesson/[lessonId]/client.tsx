@@ -95,19 +95,34 @@ export default function ENSLessonClient({ lessonId }: ENSLessonClientProps) {
   const currentModule = modules.find(m => m.id === moduleId);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
   const { completedModules, completionCount, markModuleComplete } = useCourseProgress('ens-101', modules.length);
 
   const finishCourseBackend = async () => {
+    if (isSubmittingCompletion) return; // Prevent concurrent submissions
+    setIsSubmittingCompletion(true);
     try {
       const res = await fetch('/api/user/course/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseSlug: 'ens-101' })
+        body: JSON.stringify({ courseSlug: 'ens-101', quizPassed: null, quizScore: null })
       });
-      if (res.ok) toast.success('Course completed! 🎉');
+      if (res.ok) {
+        const data = await res.json();
+        const xpAwarded = data.xpAwarded || 60;
+        toast.success(`Course completed! 🎉 +${xpAwarded} XP`, {
+          duration: 4000,
+          description: 'Check your profile to see your new level!'
+        });
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to complete course');
+      }
       try { router.refresh(); } catch { }
-    } catch {
-      // finish course API error — silently handled
+    } catch (err) {
+      toast.error('Network error completing course');
+    } finally {
+      setIsSubmittingCompletion(false);
     }
   };
 
